@@ -1,0 +1,6 @@
+[tool.pyrefly]
+project_excludes = [
+  "__pycache__",
+  "logs",
+  "self-docs",
+]
