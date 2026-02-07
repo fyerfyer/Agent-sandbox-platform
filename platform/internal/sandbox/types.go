@@ -6,13 +6,14 @@ import (
 )
 
 type ContainerConfig struct {
-	ProjectID   string
-	SessionID   string
-	Image       string
-	EnvVars     []string
-	CPULimit    float64
-	MemoryLimit int64
-	NetworkName string
+	UseAnonymousVol bool
+	ProjectID       string
+	SessionID       string
+	Image           string
+	EnvVars         []string
+	MemoryLimit     int64
+	CPULimit        int64
+	NetworkName     string
 }
 
 type FileInfo struct {

@@ -2,6 +2,8 @@ package sandbox
 
 import (
 	"context"
+	"io"
+	"os"
 
 	"github.com/docker/docker/api/types/container"
 )
@@ -14,6 +16,12 @@ type Sandbox interface {
 	GetStatus(ctx context.Context) (container.ContainerState, error)
 	GetLogs(ctx context.Context, tail int) (*LogResult, error)
 	ListFiles(ctx context.Context, path string) ([]FileInfo, error)
-	WriteFile(ctx context.Context, path string, content []byte) error
-	ReadFile(ctx context.Context, path string) ([]byte, error)
+	WriteFile(ctx context.Context, path string, reader io.Reader, perm os.FileMode) error
+	OpenFile(ctx context.Context, path string) (io.ReadCloser, error)
+
+	// 复制文件
+	// Warm Pool 使用匿名卷管理文件，因此需要这样的启动方式
+	CopyFromContainer(ctx context.Context, srcPath string, dest io.Writer) error
+	CopyToContainer(ctx context.Context, destPath string, src io.Reader) error
+	IsRunning(ctx context.Context) bool
 }
