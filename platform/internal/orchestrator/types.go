@@ -22,8 +22,8 @@ type PoolConfig struct {
 	MaxBurst            int
 	WarmupImage         string
 	HealthCheckInterval time.Duration
-	NetworkName         string // 容器使用的网络
-	HostRoot            string // 冷容器挂载目录
-	ContainerMem        int64  // MB
-	ContainerCPU        int64  // nanoCPUs
+	NetworkName         string  // 容器使用的网络
+	HostRoot            string  // 冷容器挂载目录
+	ContainerMem        int64   // MB
+	ContainerCPU        float64 // CPU 核心数（如 0.5, 1, 2）
 }

@@ -2,8 +2,10 @@ package sandbox
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -20,6 +22,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/google/uuid"
 )
 
 var _ Sandbox = (*Container)(nil)
@@ -47,6 +50,16 @@ func NewContainer(client *client.Client, cfg ContainerConfig, hostRoot string,
 		client:    client,
 		logger:    l,
 		MountPath: DefaultMountPath(cfg.ProjectID),
+	}
+
+	if c.Config.LogDir == "" {
+		c.Config.LogDir = ".dockerlogs"
+	}
+
+	// Ensure log directory exists
+	logPath := filepath.Join(c.Config.LogDir, c.Config.SessionID)
+	if err := os.MkdirAll(logPath, 0755); err != nil {
+		l.Error("Failed to create log directory", "error", err)
 	}
 
 	if !cfg.UseAnonymousVol {
@@ -115,8 +128,10 @@ func (c *Container) Start(ctx context.Context) error {
 	}
 
 	// 确保工作目录存在
-	if err := os.MkdirAll(c.HostPath, 0755); err != nil {
-		return fmt.Errorf("failed to create host path: %w", err)
+	if c.HostPath != "" {
+		if err := os.MkdirAll(c.HostPath, 0755); err != nil {
+			return fmt.Errorf("failed to create host path: %w", err)
+		}
 	}
 
 	name := ContainerName(c.Config.SessionID)
@@ -266,7 +281,7 @@ func (c *Container) Exec(ctx context.Context, cmd []string, env []string, workDi
 		Cmd:          cmd,
 		Env:          env,
 		WorkingDir:   workDir,
-		Tty:          true,
+		Tty:          false,
 		AttachStdout: true,
 		AttachStderr: true,
 	}
@@ -279,7 +294,7 @@ func (c *Container) Exec(ctx context.Context, cmd []string, env []string, workDi
 	c.logger.Info("Exec created successfully")
 
 	attachOpts := container.ExecAttachOptions{
-		Tty:    true,
+		Tty:    false,
 		Detach: false,
 	}
 
@@ -295,6 +310,7 @@ func (c *Container) Exec(ctx context.Context, cmd []string, env []string, workDi
 	// 异步读取输出
 	done := make(chan struct{})
 	go func() {
+		// TTY=false, Docker 使用多路复用格式，stdcopy 可以解析
 		_, _ = stdcopy.StdCopy(&stdoutBuf, &stderrBuf, attachResp.Reader)
 		close(done)
 	}()
@@ -311,6 +327,28 @@ func (c *Container) Exec(ctx context.Context, cmd []string, env []string, workDi
 	inspectResp, err := c.client.ContainerExecInspect(ctx, createdResp.ID)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to inspect exec: %v", ErrExecFailed, err)
+	}
+
+	// 持久化 Exec Log 存储
+	entry := ExecLogEntry{
+		ID:         uuid.New().String(),
+		Timestamp:  start,
+		Command:    cmd,
+		Output:     stdoutBuf.String() + stderrBuf.String(),
+		ExitCode:   inspectResp.ExitCode,
+		DurationMs: duration.Milliseconds(),
+	}
+
+	logFile := filepath.Join(c.Config.LogDir, c.Config.SessionID, "events.jsonl")
+	if f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+		if data, err := json.Marshal(entry); err == nil {
+			_, _ = f.Write(append(data, '\n'))
+		} else {
+			c.logger.Error("Failed to marshal log entry", "error", err)
+		}
+		f.Close()
+	} else {
+		c.logger.Error("Failed to open log file", "error", err)
 	}
 
 	return &ExecResult{
@@ -504,4 +542,33 @@ func (c *Container) IsRunning(ctx context.Context) bool {
 		return false
 	}
 	return inspect.State.Running
+}
+
+func (c *Container) GetExecLogs(ctx context.Context) ([]ExecLogEntry, error) {
+	logFile := filepath.Join(c.Config.LogDir, c.Config.SessionID, "events.jsonl")
+	f, err := os.Open(logFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []ExecLogEntry{}, nil
+		}
+		return nil, fmt.Errorf("failed to open log file: %w", err)
+	}
+	defer f.Close()
+
+	var entries []ExecLogEntry
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		var entry ExecLogEntry
+		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+			c.logger.Warn("Failed to unmarshal log entry", "error", err)
+			continue
+		}
+		entries = append(entries, entry)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("failed to scan log file: %w", err)
+	}
+
+	return entries, nil
 }

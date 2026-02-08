@@ -15,6 +15,7 @@ type Sandbox interface {
 	Exec(ctx context.Context, cmd []string, env []string, workDir string) (*ExecResult, error)
 	GetStatus(ctx context.Context) (container.ContainerState, error)
 	GetLogs(ctx context.Context, tail int) (*LogResult, error)
+	GetExecLogs(ctx context.Context) ([]ExecLogEntry, error)
 	ListFiles(ctx context.Context, path string) ([]FileInfo, error)
 	WriteFile(ctx context.Context, path string, reader io.Reader, perm os.FileMode) error
 	OpenFile(ctx context.Context, path string) (io.ReadCloser, error)

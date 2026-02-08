@@ -11,9 +11,10 @@ type ContainerConfig struct {
 	SessionID       string
 	Image           string
 	EnvVars         []string
-	MemoryLimit     int64
-	CPULimit        int64
+	MemoryLimit     int64   // 内存限制（字节）
+	CPULimit        float64 // CPU 核心数（如 0.5, 1, 2）
 	NetworkName     string
+	LogDir          string // 宿主机日志存储路径
 }
 
 type FileInfo struct {
@@ -35,6 +36,15 @@ type LogResult struct {
 	Stderr string `json:"stderr"`
 }
 
+type ExecLogEntry struct {
+	ID         string    `json:"id"`
+	Timestamp  time.Time `json:"timestamp"`
+	Command    []string  `json:"command"`
+	Output     string    `json:"output"`
+	ExitCode   int       `json:"exit_code"`
+	DurationMs int64     `json:"duration_ms"`
+}
+
 func ContainerName(sessionID string) string {
 	return "agent-" + sessionID
 }
@@ -48,5 +58,5 @@ func DefaultHostPath(root string, projectID string) string {
 }
 
 func DefaultMountPath(projectID string) string {
-	return "app/workspace"
+	return "/app/workspace"
 }
