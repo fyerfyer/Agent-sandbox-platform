@@ -16,11 +16,12 @@ var _ IPool = (*Pool)(nil)
 
 type Pool struct {
 	mu             sync.Mutex
+	availableCh    chan struct{} // 使用+创建空闲容器的名额，当前总名额为 MaxBurst - (Idle + Active)
 	client         *client.Client
 	logger         *slog.Logger
 	config         PoolConfig
 	idleContainers []*sandbox.Container
-	factory        func(ctx context.Context) (*sandbox.Container, error)
+	managedCount   int // Pool 当前所有管理的容器数量（包括空闲和正在使用的）
 	cooldownUntil  time.Time
 	stopCh         chan struct{}
 }
@@ -43,7 +44,13 @@ func NewPool(client *client.Client, logger *slog.Logger, cfg PoolConfig) *Pool {
 		logger:         logger,
 		config:         cfg,
 		idleContainers: make([]*sandbox.Container, 0),
+		availableCh:    make(chan struct{}, cfg.MaxBurst),
 		stopCh:         make(chan struct{}),
+	}
+
+	// 初始化 availableCh，装 cfg.MaxBurst 个空闲容器
+	for i := 0; i < cfg.MaxBurst; i++ {
+		p.availableCh <- struct{}{}
 	}
 
 	go p.worker()
@@ -52,39 +59,87 @@ func NewPool(client *client.Client, logger *slog.Logger, cfg PoolConfig) *Pool {
 }
 
 func (p *Pool) Acquire(ctx context.Context) (*sandbox.Container, error) {
-	const maxRetries = 3
-	for range maxRetries {
-		p.mu.Lock()
-		if len(p.idleContainers) == 0 {
-			p.mu.Unlock()
-			p.logger.Info("Pool empty")
-			return nil, fmt.Errorf("pool is empty")
+	for {
+		// 等待有空闲容器
+		select {
+		case <-p.availableCh:
+			// 有空闲容器，继续
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-p.stopCh:
+			return nil, fmt.Errorf("pool is shutting down")
 		}
 
-		idx := len(p.idleContainers) - 1
-		c := p.idleContainers[idx]
-		p.idleContainers = p.idleContainers[:idx]
+		p.mu.Lock()
+
+		if len(p.idleContainers) > 0 {
+			idx := len(p.idleContainers) - 1
+			c := p.idleContainers[idx]
+			p.idleContainers = p.idleContainers[:idx]
+			p.mu.Unlock()
+
+			// 检验容器状态
+			if c.IsRunning(ctx) {
+				p.logger.Info("Acquired warm container", "id", c.ID)
+				return c, nil
+			}
+
+			// 清理
+			p.logger.Warn("Pooled container is dead, discarding", "id", c.ID)
+			go func() {
+				c.Remove(context.Background())
+				// 加锁更新容器总数
+				p.mu.Lock()
+				p.managedCount--
+				p.mu.Unlock()
+				p.availableCh <- struct{}{}
+			}()
+
+			// 尝试下一个容器
+			continue
+		}
+
+		// 没有空闲容器，创建一个新容器
+		// 已经消耗了一个使用+创建名额，可以创建
+		p.managedCount++
 		p.mu.Unlock()
 
-		if c.IsRunning(ctx) {
-			p.logger.Info("Acquired warm container", "id", c.ID)
-			return c, nil
+		c, err := p.createWarmContainer(ctx)
+		if err != nil {
+			p.logger.Error("Failed to create burst container", "error", err)
+			p.mu.Lock()
+			p.managedCount-- // 回退
+			p.mu.Unlock()
+			// 返回一个使用+创建名额，因为创建失败了
+			p.availableCh <- struct{}{}
+			return nil, err
 		}
 
-		p.logger.Warn("Pooled container is dead, discarding", "id", c.ID)
-		go c.Remove(context.Background())
+		p.logger.Info("Created burst container", "id", c.ID)
+		return c, nil
 	}
-
-	return nil, fmt.Errorf("failed to acquire valid container after %d retries", maxRetries)
 }
 
-// TODO：之后可以考虑清空 container,当前先简单删除
 func (p *Pool) Release(ctx context.Context, c *sandbox.Container) {
+	// 直接更新
+	// API 行为保持同步，清理流程异步
+	p.mu.Lock()
+	p.managedCount--
+	p.mu.Unlock()
+
+	// 返回一个使用+创建名额
+	select {
+	case p.availableCh <- struct{}{}:
+	default:
+		p.logger.Warn("Failed to return capacity token (channel full), this should not happen")
+	}
+
+	// 异步清理
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		if err := c.Stop(ctx, 10); err != nil {
+		if err := c.Stop(ctx, 2); err != nil {
 			p.logger.Error("Failed to stop container", "id", c.ID, "error", err)
 		}
 
@@ -92,26 +147,31 @@ func (p *Pool) Release(ctx context.Context, c *sandbox.Container) {
 			p.logger.Error("Failed to remove container", "id", c.ID, "error", err)
 		}
 
-		p.logger.Info("Released container", "id", c.ID)
+		p.logger.Info("Released and removed container", "id", c.ID)
 	}()
 }
 
 func (p *Pool) Shutdown(ctx context.Context, c *sandbox.Container) {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-		for _, c := range p.idleContainers {
-			if err := c.Stop(ctx, 10); err != nil {
-				p.logger.Error("Failed to stop container", "id", c.ID, "error", err)
-			}
-			if err := c.Remove(ctx); err != nil {
-				p.logger.Error("Failed to remove container", "id", c.ID, "error", err)
-			}
-		}
+	// 关闭 stopCh 以停止 worker
+	select {
+	case <-p.stopCh:
+	default:
+		close(p.stopCh)
+	}
 
-		p.idleContainers = nil
-	}()
+	// 异步移除容器
+	for _, c := range p.idleContainers {
+		go func(c *sandbox.Container) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			c.Stop(ctx, 10)
+			c.Remove(ctx)
+		}(c)
+	}
+	p.idleContainers = nil
 }
 
 func (p *Pool) worker() {
@@ -142,7 +202,14 @@ func (p *Pool) healthCheck() {
 			alive = append(alive, c)
 		} else {
 			p.logger.Warn("Removing dead container from pool", "id", c.ID)
-			go c.Remove(context.Background())
+			go func(c *sandbox.Container) {
+				c.Remove(context.Background())
+				p.mu.Lock()
+				p.managedCount--
+				p.mu.Unlock()
+				// 返还一个使用+创建名额
+				p.availableCh <- struct{}{}
+			}(c)
 		}
 	}
 
@@ -156,24 +223,56 @@ func (p *Pool) maintainPool() {
 		return
 	}
 
-	needed := p.config.MinIdle - len(p.idleContainers)
-	p.mu.Unlock()
+	currentIdle := len(p.idleContainers)
+	needed := p.config.MinIdle - currentIdle
+
+	// 限制最大创建数量
+	maxAllowed := p.config.MaxBurst - p.managedCount
+
+	if needed > maxAllowed {
+		needed = maxAllowed
+	}
 
 	if needed <= 0 {
+		p.mu.Unlock()
 		return
 	}
 
-	// 限制一次最多发送 3 个请求
+	// 预占名额
+	// 如果预占成功，增加 managedCount
+	tokensConsumed := 0
+TokenLoop:
+	for i := 0; i < needed; i++ {
+		select {
+		case <-p.availableCh:
+			tokensConsumed++
+			p.managedCount++ // 预占名额
+		default:
+			// 没有名额，结束循环
+			break TokenLoop
+		}
+	}
+
+	p.mu.Unlock()
+
+	if tokensConsumed == 0 {
+		return
+	}
+
+	// 限制并发创建数量
 	sem := make(chan struct{}, 3)
 	var wg sync.WaitGroup
 
-	// 熔断器计数
-	var failureCount int32 = 1
+	// 失败计数器
+	var failureCount int32 = 0
 
-	for range needed {
+	for range tokensConsumed {
 		sem <- struct{}{}
-		wg.Go(func() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 			defer func() { <-sem }()
+
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
@@ -182,32 +281,56 @@ func (p *Pool) maintainPool() {
 				p.logger.Error("Failed to replenish pool", "error", err)
 				newCount := atomic.AddInt32(&failureCount, 1)
 				if newCount >= 3 {
+					p.mu.Lock()
 					p.cooldownUntil = time.Now().Add(1 * time.Minute)
+					p.mu.Unlock()
 				}
+
+				// 创建失败，回滚
+				p.mu.Lock()
+				p.managedCount--
+				p.mu.Unlock()
+				p.availableCh <- struct{}{}
 				return
 			}
 
-			// 二次校验
+			// 加入空闲池
 			p.mu.Lock()
-			if len(p.idleContainers) < p.config.MinIdle {
+			// 二次检查
+			if len(p.idleContainers) < p.config.MinIdle &&
+				p.managedCount <= p.config.MaxBurst {
 				p.idleContainers = append(p.idleContainers, container)
+				p.mu.Unlock()
+				// 返回一个使用+创建名额
+				p.availableCh <- struct{}{}
+			} else {
+				// 池子已满，回滚
+				p.managedCount--
+				p.mu.Unlock()
+				go func() {
+					container.Stop(ctx, 10)
+					container.Remove(ctx)
+				}()
+				// 返回一个使用+创建名额
+				p.availableCh <- struct{}{}
 			}
-			p.mu.Unlock()
-		})
+		}()
 	}
 
 	wg.Wait()
 }
 
-// Warm Container 创建通用容器
 func (p *Pool) createWarmContainer(ctx context.Context) (*sandbox.Container, error) {
+	// 生成唯一 session ID
+	sessionID := fmt.Sprintf("warmup-%d", time.Now().UnixNano())
+
 	cfg := sandbox.ContainerConfig{
 		Image:           p.config.WarmupImage,
 		MemoryLimit:     p.config.ContainerMem * 1024 * 1024,
 		CPULimit:        p.config.ContainerCPU,
 		UseAnonymousVol: true,
 		NetworkName:     p.config.NetworkName,
-		SessionID:       "warmup",
+		SessionID:       sessionID,
 		ProjectID:       "pool",
 	}
 

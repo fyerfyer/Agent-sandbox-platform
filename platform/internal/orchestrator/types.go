@@ -2,7 +2,7 @@ package orchestrator
 
 import "time"
 
-// TODO: 冷容器和热容器的配合在哪些地方需要区分？
+// TODO: 冷容器和热容器的配置在哪些地方需要区分？
 type ContainerOptions struct {
 	Image     string
 	EnvVars   []string
@@ -19,7 +19,7 @@ const (
 
 type PoolConfig struct {
 	MinIdle             int
-	MaxBurst            int
+	MaxBurst            int // Idle + Active = MaxBurst
 	WarmupImage         string
 	HealthCheckInterval time.Duration
 	NetworkName         string  // 容器使用的网络
