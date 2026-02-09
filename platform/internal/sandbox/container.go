@@ -501,6 +501,25 @@ func (c *Container) CopyToContainer(ctx context.Context, destPath string, src io
 	return c.client.CopyToContainer(ctx, c.ID, "/", pr, opts)
 }
 
+// UploadArchive 用于多文件 Tar 上传
+// 使用这个方法上传文件会自动保留文件目录架构
+func (c *Container) UploadArchive(ctx context.Context, destPath string, tarStream io.Reader) error {
+	containerDest, err := c.resolveContainerPath(destPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve container path: %v", err)
+	}
+
+	if _, err := c.Exec(ctx, []string{"mkdir", "-p", containerDest}, nil, "/"); err != nil {
+		return err
+	}
+
+	opts := container.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: true,
+	}
+
+	return c.client.CopyToContainer(ctx, c.ID, containerDest, tarStream, opts)
+}
+
 func (c *Container) CopyFromContainer(ctx context.Context, srcPath string, dest io.Writer) error {
 	containerSrc, err := c.resolveContainerPath(srcPath)
 	if err != nil {

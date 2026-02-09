@@ -23,6 +23,10 @@ type Sandbox interface {
 	// 复制文件
 	// Warm Pool 使用匿名卷管理文件，因此需要这样的启动方式
 	CopyFromContainer(ctx context.Context, srcPath string, dest io.Writer) error
+
+	// 上传多文件 Tar 的方法
+	UploadArchive(ctx context.Context, destPath string, tarStream io.Reader) error
+
 	CopyToContainer(ctx context.Context, destPath string, src io.Reader) error
 	IsRunning(ctx context.Context) bool
 }

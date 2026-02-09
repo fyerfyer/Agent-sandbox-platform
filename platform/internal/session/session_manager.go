@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"platform/internal/orchestrator"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -19,12 +20,13 @@ type SessionManager struct {
 	logger      *slog.Logger
 }
 
-func NewSessionManager(pool orchestrator.IPool, repo SessionRepository, cache redis.Cmdable, queueClient *asynq.Client) *SessionManager {
+func NewSessionManager(pool orchestrator.IPool, repo SessionRepository, cache redis.Cmdable, queueClient *asynq.Client, logger *slog.Logger) *SessionManager {
 	return &SessionManager{
 		pool:        pool,
 		repo:        repo,
 		cache:       cache,
 		queueClient: queueClient,
+		logger:      logger,
 	}
 }
 
@@ -32,8 +34,10 @@ func (s *SessionManager) CreateSession(ctx context.Context, params SessionParams
 	session := &Session{
 		ID:        uuid.New().String(),
 		ProjectID: params.ProjectID,
+		UserID:    params.UserID,
 		Status:    StatusInitializing,
 		Strategy:  params.Strategy,
+		CreatedAt: time.Now(),
 	}
 
 	if err := s.repo.Create(ctx, session); err != nil {
@@ -44,6 +48,7 @@ func (s *SessionManager) CreateSession(ctx context.Context, params SessionParams
 		SessionID: session.ID,
 		ProjectID: session.ProjectID,
 		UserID:    session.UserID,
+		Image:     params.ContainerOpts.Image,
 		Strategy:  session.Strategy,
 		EnvVars:   params.EnvVars,
 	})

@@ -48,11 +48,13 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*session.Session, 
 			var cachedSession cacheSession
 			if err := json.Unmarshal([]byte(val), &cachedSession); err == nil {
 				sess := &session.Session{
-					ID:        cachedSession.ID,
-					ProjectID: cachedSession.ProjectID,
-					UserID:    cachedSession.UserID,
-					Status:    cachedSession.Status,
-					CreatedAt: cachedSession.CreatedAt,
+					ID:          cachedSession.ID,
+					ProjectID:   cachedSession.ProjectID,
+					UserID:      cachedSession.UserID,
+					ContainerID: cachedSession.ContainerID,
+					NodeIP:      cachedSession.NodeIP,
+					Status:      cachedSession.Status,
+					CreatedAt:   cachedSession.CreatedAt,
 				}
 
 				return sess, nil
@@ -67,21 +69,25 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*session.Session, 
 	}
 
 	sess := &session.Session{
-		ID:        sessionModel.ID,
-		ProjectID: sessionModel.ProjectID,
-		UserID:    sessionModel.UserID,
-		Status:    sessionModel.SessionStatus,
-		CreatedAt: sessionModel.CreatedAt,
+		ID:          sessionModel.ID,
+		ProjectID:   sessionModel.ProjectID,
+		UserID:      sessionModel.UserID,
+		ContainerID: sessionModel.ContainerID,
+		NodeIP:      sessionModel.NodeIP,
+		Status:      sessionModel.SessionStatus,
+		CreatedAt:   sessionModel.CreatedAt,
 	}
 
 	if r.redis != nil {
 		key := sessionCacheKey(id)
 		cachedSession := &cacheSession{
-			ID:        sessionModel.ID,
-			ProjectID: sessionModel.ProjectID,
-			UserID:    sessionModel.UserID,
-			Status:    sessionModel.SessionStatus,
-			CreatedAt: sessionModel.CreatedAt,
+			ID:          sessionModel.ID,
+			ProjectID:   sessionModel.ProjectID,
+			UserID:      sessionModel.UserID,
+			ContainerID: sessionModel.ContainerID,
+			NodeIP:      sessionModel.NodeIP,
+			Status:      sessionModel.SessionStatus,
+			CreatedAt:   sessionModel.CreatedAt,
 		}
 
 		if b, err := json.Marshal(cachedSession); err == nil {
@@ -99,6 +105,11 @@ func (r *Repository) UpdateSessionStatus(ctx context.Context, id string, status 
 		Update()
 	if err != nil {
 		return err
+	}
+
+	// Invalidate cache
+	if r.redis != nil {
+		_ = r.redis.Del(ctx, sessionCacheKey(id)).Err()
 	}
 
 	return nil

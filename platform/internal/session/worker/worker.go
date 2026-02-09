@@ -54,6 +54,7 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		ProjectID: payload.ProjectID,
 		SessionID: payload.SessionID,
 		EnvVars:   payload.EnvVars,
+		Image:     payload.Image,
 	}
 
 	container, err := strategy.Get(ctx, w.pool, containerOptions)
@@ -98,7 +99,7 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 			return err
 		}
 
-		if err := container.CopyToContainer(ctx, "/app/workspace", tarReader); err != nil {
+		if err := container.UploadArchive(ctx, "/", tarReader); err != nil {
 			w.bus.Publish(ctx, payload.SessionID, eventbus.Event{
 				Type:    eventbus.EventSessionError,
 				Payload: fmt.Sprintf("failed to sync project: %v", err),
@@ -107,7 +108,7 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		}
 
 		envReader := GenerateEnvFile(payload.EnvVars)
-		if err := container.WriteFile(ctx, "/app/workspace/.env", envReader, 0644); err != nil {
+		if err := container.WriteFile(ctx, ".env", envReader, 0644); err != nil {
 			w.bus.Publish(ctx, payload.SessionID, eventbus.Event{
 				Type:    eventbus.EventSessionError,
 				Payload: fmt.Sprintf("failed to write .env: %v", err),

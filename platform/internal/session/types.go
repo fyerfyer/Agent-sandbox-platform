@@ -41,6 +41,7 @@ type SessionCreatePayload struct {
 	SessionID string                    `json:"session_id"`
 	ProjectID string                    `json:"project_id"`
 	UserID    string                    `json:"user_id"`
+	Image     string                    `json:"image"`
 	Strategy  orchestrator.StrategyType `json:"strategy"`
 	EnvVars   []string                  `json:"env_vars"`
 }
