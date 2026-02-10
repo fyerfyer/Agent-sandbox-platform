@@ -4,8 +4,6 @@ import (
 	"context"
 	"io"
 	"os"
-
-	"github.com/docker/docker/api/types/container"
 )
 
 type Sandbox interface {
@@ -13,7 +11,7 @@ type Sandbox interface {
 	Stop(ctx context.Context, timeoutSeconds int) error
 	Remove(ctx context.Context) error
 	Exec(ctx context.Context, cmd []string, env []string, workDir string) (*ExecResult, error)
-	GetStatus(ctx context.Context) (container.ContainerState, error)
+	GetStatus(ctx context.Context) (string, error)
 	GetLogs(ctx context.Context, tail int) (*LogResult, error)
 	GetExecLogs(ctx context.Context) ([]ExecLogEntry, error)
 	ListFiles(ctx context.Context, path string) ([]FileInfo, error)

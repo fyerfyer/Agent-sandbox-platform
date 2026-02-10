@@ -24,7 +24,7 @@ func (b *RedisBus) Publish(ctx context.Context, sessionID string, event Event) e
 	channelKey := SessionChannelKey(sessionID)
 	data, err := json.Marshal(event)
 	if err != nil {
-		return fmt.Errorf("failed to marshel event: %w", err)
+		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	return b.client.Publish(ctx, channelKey, data).Err()

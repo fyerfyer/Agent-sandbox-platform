@@ -6,6 +6,6 @@ import (
 )
 
 type IDispatcher interface {
-	Diapatch(ctx context.Context, container *sandbox.Container, input string) error
+	Dispatch(ctx context.Context, container *sandbox.Container, input string) error
 	CleanUp(sessionID string)
 }

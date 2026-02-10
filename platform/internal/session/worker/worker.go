@@ -108,7 +108,7 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		}
 
 		envReader := GenerateEnvFile(payload.EnvVars)
-		if err := container.WriteFile(ctx, ".env", envReader, 0644); err != nil {
+		if err := container.CopyToContainer(ctx, ".env", envReader); err != nil {
 			w.bus.Publish(ctx, payload.SessionID, eventbus.Event{
 				Type:    eventbus.EventSessionError,
 				Payload: fmt.Sprintf("failed to write .env: %v", err),

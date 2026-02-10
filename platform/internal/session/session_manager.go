@@ -64,3 +64,11 @@ func (s *SessionManager) CreateSession(ctx context.Context, params SessionParams
 	s.logger.Info("Session created", slog.String("session_id", session.ID), slog.String("task_id", info.ID))
 	return session, nil
 }
+
+func (s *SessionManager) GetSession(ctx context.Context, id string) (*Session, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *SessionManager) TerminateSession(ctx context.Context, id string) error {
+	return s.repo.UpdateSessionStatus(ctx, id, StatusTerminated)
+}

@@ -67,7 +67,7 @@ func (d *Dispatcher) GetClient(ctx context.Context, container *sandbox.Container
 	return agentproto.NewAgentServiceClient(newConn), nil
 }
 
-func (d *Dispatcher) Diapatch(ctx context.Context, container *sandbox.Container, input string) error {
+func (d *Dispatcher) Dispatch(ctx context.Context, container *sandbox.Container, input string) error {
 	client, err := d.GetClient(ctx, container)
 	if err != nil {
 		return err

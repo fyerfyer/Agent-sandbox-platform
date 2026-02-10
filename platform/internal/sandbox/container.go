@@ -470,6 +470,12 @@ func (c *Container) CopyToContainer(ctx context.Context, destPath string, src io
 		return err
 	}
 
+	// Buffer content to get size for tar header
+	content, err := io.ReadAll(src)
+	if err != nil {
+		return fmt.Errorf("failed to read content: %v", err)
+	}
+
 	pr, pw := io.Pipe()
 	go func() {
 		tw := tar.NewWriter(pw)
@@ -481,14 +487,14 @@ func (c *Container) CopyToContainer(ctx context.Context, destPath string, src io
 		header := &tar.Header{
 			Name: path.Base(containerDest),
 			Mode: 0644,
-			Size: 0,
+			Size: int64(len(content)),
 		}
 		if err := tw.WriteHeader(header); err != nil {
 			pw.CloseWithError(err)
 			return
 		}
 
-		if _, err := io.Copy(tw, src); err != nil {
+		if _, err := tw.Write(content); err != nil {
 			pw.CloseWithError(err)
 			return
 		}
@@ -498,7 +504,7 @@ func (c *Container) CopyToContainer(ctx context.Context, destPath string, src io
 		AllowOverwriteDirWithFile: true,
 	}
 
-	return c.client.CopyToContainer(ctx, c.ID, "/", pr, opts)
+	return c.client.CopyToContainer(ctx, c.ID, parent, pr, opts)
 }
 
 // UploadArchive 用于多文件 Tar 上传
