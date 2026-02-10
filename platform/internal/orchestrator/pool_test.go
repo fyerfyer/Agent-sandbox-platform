@@ -118,6 +118,7 @@ func TestPoolMaintenance(t *testing.T) {
 		NetworkName:         testNetworkName,
 		ContainerMem:        64,  // 64MB
 		ContainerCPU:        0.1, // 0.1 CPU
+		DisableHealthCheck:  true,
 	}
 
 	p := NewPool(h.dockerClient, h.logger, cfg)
@@ -171,6 +172,7 @@ func TestAcquireRelease(t *testing.T) {
 		HealthCheckInterval: 1 * time.Second,
 		NetworkName:         testNetworkName,
 		ContainerMem:        64,
+		DisableHealthCheck:  true,
 	}
 
 	p := NewPool(h.dockerClient, h.logger, cfg)
@@ -280,6 +282,7 @@ func TestConcurrency(t *testing.T) {
 		HealthCheckInterval: 1 * time.Second,
 		NetworkName:         testNetworkName,
 		ContainerMem:        64,
+		DisableHealthCheck:  true,
 	}
 
 	p := NewPool(h.dockerClient, h.logger, cfg)
@@ -352,6 +355,7 @@ func TestHealthCheck(t *testing.T) {
 		HealthCheckInterval: 2 * time.Second,
 		NetworkName:         testNetworkName,
 		ContainerMem:        64,
+		DisableHealthCheck:  true,
 	}
 
 	p := NewPool(h.dockerClient, h.logger, cfg)
@@ -398,4 +402,222 @@ func TestHealthCheck(t *testing.T) {
 		t.Errorf("Pool failed to replenish to MinIdle, count=%d", count)
 	}
 	t.Logf("Health check passed: Victim removed, Pool size: %d", count)
+}
+
+func TestOrphanedContainerAdoption(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	h := NewTestHarness(t)
+	defer h.Cleanup()
+
+	ctx := context.Background()
+
+	// 1. Manually create an "orphaned" container
+	// It must be effectively "running" and have the correct labels/network
+	orphanName := "orphan-pool-test"
+	orphanCfg := &container.Config{
+		Image: testWarmImage,
+		Labels: map[string]string{
+			"managed_by": "agent-platform",
+			"project_id": "pool",
+			"session_id": "orphan-session",
+		},
+		Cmd: []string{"top"}, // Keep running
+	}
+	hostCfg := &container.HostConfig{
+		NetworkMode: container.NetworkMode(testNetworkName),
+		Resources: container.Resources{
+			Memory:   64 * 1024 * 1024,
+			NanoCPUs: 100000000, // 0.1 CPU
+		},
+	}
+	netCfg := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			testNetworkName: {},
+		},
+	}
+
+	resp, err := h.dockerClient.ContainerCreate(ctx, orphanCfg, hostCfg, netCfg, nil, orphanName)
+	if err != nil {
+		t.Fatalf("Failed to create orphan container: %v", err)
+	}
+	if err := h.dockerClient.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		t.Fatalf("Failed to start orphan container: %v", err)
+	}
+	t.Logf("Created orphan container: %s", resp.ID)
+
+	// Ensure it's running before we start the pool
+	time.Sleep(2 * time.Second)
+
+	// 2. Start Pool with MinIdle=2.
+	// It should adopt the orphan, so we start with 1 idle (the orphan) + create 1 more to meet MinIdle=2.
+	cfg := PoolConfig{
+		MinIdle:             2,
+		MaxBurst:            5,
+		WarmupImage:         testWarmImage,
+		HealthCheckInterval: 1 * time.Second,
+		NetworkName:         testNetworkName,
+		ContainerMem:        64,
+		DisableHealthCheck:  true,
+	}
+
+	p := NewPool(h.dockerClient, h.logger, cfg)
+	h.pool = p
+
+	// allow pool to adopt and fill
+	time.Sleep(5 * time.Second)
+
+	p.mu.Lock()
+	idleCount := len(p.idleContainers)
+	managedCount := p.managedCount
+	var adopted bool
+	for _, c := range p.idleContainers {
+		if c.ID == resp.ID {
+			adopted = true
+			break
+		}
+	}
+	p.mu.Unlock()
+
+	if !adopted {
+		t.Errorf("Pool failed to adopt orphaned container %s", resp.ID)
+	}
+
+	// Should have at least MinIdle (2)
+	if idleCount < 2 {
+		t.Errorf("Expected at least 2 idle containers, got %d", idleCount)
+	}
+
+	// Managed count should track the adopted one correctly
+	if managedCount < 2 {
+		t.Errorf("Expected managedCount >= 2, got %d", managedCount)
+	}
+
+	t.Log("Orphan adoption test passed")
+}
+
+func TestAgentHealthCheck(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	h := NewTestHarness(t)
+	defer h.Cleanup()
+
+	ctx := context.Background()
+
+	// 1. Create a "healthy" container (listens on 50051)
+	healthyName := "healthy-pool-test"
+	// Alpine nc: nc -l -p 50051
+	// We use a loop to keep it listening after connections
+	healthyCmd := []string{"sh", "-c", "while true; do nc -l -p 50051 -e echo ok; done"}
+	healthyCfg := &container.Config{
+		Image: testWarmImage,
+		Labels: map[string]string{
+			"managed_by": "agent-platform",
+			"project_id": "pool",
+			"session_id": "healthy-session",
+		},
+		Cmd: healthyCmd,
+	}
+	hostCfg := &container.HostConfig{
+		NetworkMode: container.NetworkMode(testNetworkName),
+		Resources: container.Resources{
+			Memory:   64 * 1024 * 1024,
+			NanoCPUs: 100000000,
+		},
+	}
+	netCfg := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			testNetworkName: {},
+		},
+	}
+
+	healthyResp, err := h.dockerClient.ContainerCreate(ctx, healthyCfg, hostCfg, netCfg, nil, healthyName)
+	if err != nil {
+		t.Fatalf("Failed to create healthy container: %v", err)
+	}
+	if err := h.dockerClient.ContainerStart(ctx, healthyResp.ID, container.StartOptions{}); err != nil {
+		t.Fatalf("Failed to start healthy container: %v", err)
+	}
+
+	// 2. Create an "unhealthy" container (does NOT listen)
+	unhealthyName := "unhealthy-pool-test"
+	unhealthyCfg := &container.Config{
+		Image: testWarmImage,
+		Labels: map[string]string{
+			"managed_by": "agent-platform",
+			"project_id": "pool",
+			"session_id": "unhealthy-session",
+		},
+		Cmd: []string{"top"}, // Just runs, doesn't listen
+	}
+	// Use same host/net config
+	unhealthyResp, err := h.dockerClient.ContainerCreate(ctx, unhealthyCfg, hostCfg, netCfg, nil, unhealthyName)
+	if err != nil {
+		t.Fatalf("Failed to create unhealthy container: %v", err)
+	}
+	if err := h.dockerClient.ContainerStart(ctx, unhealthyResp.ID, container.StartOptions{}); err != nil {
+		t.Fatalf("Failed to start unhealthy container: %v", err)
+	}
+
+	// Give them time to start
+	time.Sleep(2 * time.Second)
+
+	// 3. Start Pool
+	// Enable HealthCheck
+	cfg := PoolConfig{
+		MinIdle:             2, // We have 2 orphans, both should be adopted initially
+		MaxBurst:            5,
+		WarmupImage:         testWarmImage,
+		HealthCheckInterval: 2 * time.Second, // Fast check
+		NetworkName:         testNetworkName,
+		ContainerMem:        64,
+		DisableHealthCheck:  false, // ENABLED
+	}
+
+	p := NewPool(h.dockerClient, h.logger, cfg)
+	h.pool = p
+
+	// Wait for adoption and initial health check
+	// 5s for adoption/stable, then + HealthCheckInterval
+	t.Log("Waiting for pool to adopt and check health...")
+	time.Sleep(6 * time.Second)
+
+	p.mu.Lock()
+	idleCount := len(p.idleContainers)
+	var foundHealthy, foundUnhealthy bool
+	for _, c := range p.idleContainers {
+		if c.ID == healthyResp.ID {
+			foundHealthy = true
+		}
+		if c.ID == unhealthyResp.ID {
+			foundUnhealthy = true
+		}
+	}
+	p.mu.Unlock()
+
+	// Healthy should be active (adopted and kept)
+	if !foundHealthy {
+		// It might have been replaced if it failed check? But it should pass.
+		// Or maybe it wasn't adopted?
+		t.Error("Healthy container was NOT found in pool (should be adopted and kept)")
+	}
+
+	// Unhealthy should be removed
+	if foundUnhealthy {
+		t.Error("Unhealthy container WAS found in pool (should be removed)")
+	}
+
+	// Pool should still maintain MinIdle=2, but since our "warmup" image doesn't actually listen on 50051,
+	// the replacements will also fail health checks and be removed.
+	// So we might see idleCount fluctuating.
+	// We MUST ensure the HEALTHY one is still there (so at least 1).
+	if idleCount < 1 {
+		t.Errorf("Pool size dropped below 1 (healthy container missing?): %d", idleCount)
+	}
+
+	t.Log("Agent health check test passed")
 }

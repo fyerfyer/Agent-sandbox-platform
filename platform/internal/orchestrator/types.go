@@ -25,5 +25,6 @@ type PoolConfig struct {
 	NetworkName         string  // 容器使用的网络
 	HostRoot            string  // 冷容器挂载目录
 	ContainerMem        int64   // MB
-	ContainerCPU        float64 // CPU 核心数（如 0.5, 1, 2）
+	ContainerCPU        float64 // CPU 核心数
+	DisableHealthCheck  bool    // 是否禁用应用层健康检查（用于测试）
 }

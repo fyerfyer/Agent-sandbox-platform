@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
+	"platform/internal/monitor"
 	"platform/internal/sandbox"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
 
@@ -53,12 +57,69 @@ func NewPool(client *client.Client, logger *slog.Logger, cfg PoolConfig) *Pool {
 		p.availableCh <- struct{}{}
 	}
 
+	// 清理孤儿容器
+	// 扫描所有带有 managed_by=agent-platform 和 project_id=pool 标签的容器
+	opts := container.ListOptions{
+		All:     true,
+		Filters: filters.NewArgs(),
+	}
+	opts.Filters.Add("label", "managed_by=agent-platform")
+	opts.Filters.Add("label", "project_id=pool")
+
+	containers, err := client.ContainerList(context.Background(), opts)
+	if err != nil {
+		logger.Error("Failed to list orphaned containers", "error", err)
+	} else {
+		for _, c := range containers {
+			if c.State == "running" {
+				logger.Info("Adopting orphaned container", "id", c.ID)
+				inspect, err := client.ContainerInspect(context.Background(), c.ID)
+				if err != nil {
+					logger.Error("Failed to inspect orphaned container", "id", c.ID, "error", err)
+					continue
+				}
+
+				// 重建 Container
+				sc := sandbox.NewContainer(client, sandbox.ContainerConfig{
+					Image:           c.Image,
+					SessionID:       c.Labels["session_id"],
+					ProjectID:       c.Labels["project_id"],
+					NetworkName:     cfg.NetworkName,
+					MemoryLimit:     inspect.HostConfig.Memory,
+					CPULimit:        float64(inspect.HostConfig.NanoCPUs) / 1e9,
+					UseAnonymousVol: true, // Pool 容器是匿名卷
+				}, "", logger)
+				sc.ID = c.ID
+
+				// 获取 IP
+				if net, ok := c.NetworkSettings.Networks[cfg.NetworkName]; ok {
+					sc.IP = net.IPAddress
+				}
+
+				p.idleContainers = append(p.idleContainers, sc)
+				p.managedCount++
+				// 消耗一个 availableCh token
+				select {
+				case <-p.availableCh:
+				default:
+					logger.Warn("Pool overflow during adoption")
+				}
+			} else {
+				logger.Info("Removing stopped orphaned container", "id", c.ID)
+				client.ContainerRemove(context.Background(), c.ID, container.RemoveOptions{Force: true})
+			}
+		}
+	}
+
+	monitor.PoolIdleCount.Set(float64(len(p.idleContainers)))
+
 	go p.worker()
 
 	return p
 }
 
 func (p *Pool) Acquire(ctx context.Context) (*sandbox.Container, error) {
+	start := time.Now()
 	for {
 		// 等待有空闲容器
 		select {
@@ -81,6 +142,8 @@ func (p *Pool) Acquire(ctx context.Context) (*sandbox.Container, error) {
 			// 检验容器状态
 			if c.IsRunning(ctx) {
 				p.logger.Info("Acquired warm container", "id", c.ID)
+				monitor.PoolIdleCount.Dec()
+				monitor.PoolAcquisitionLatency.Observe(time.Since(start).Seconds())
 				return c, nil
 			}
 
@@ -107,6 +170,7 @@ func (p *Pool) Acquire(ctx context.Context) (*sandbox.Container, error) {
 		c, err := p.createWarmContainer(ctx)
 		if err != nil {
 			p.logger.Error("Failed to create burst container", "error", err)
+			monitor.ContainerCreationErrors.Inc()
 			p.mu.Lock()
 			p.managedCount-- // 回退
 			p.mu.Unlock()
@@ -116,6 +180,7 @@ func (p *Pool) Acquire(ctx context.Context) (*sandbox.Container, error) {
 		}
 
 		p.logger.Info("Created burst container", "id", c.ID)
+		monitor.PoolAcquisitionLatency.Observe(time.Since(start).Seconds())
 		return c, nil
 	}
 }
@@ -198,7 +263,8 @@ func (p *Pool) healthCheck() {
 
 	alive := make([]*sandbox.Container, 0, len(p.idleContainers))
 	for _, c := range p.idleContainers {
-		if c.IsRunning(ctx) {
+		// 增加 TCP Dial 检查
+		if c.IsRunning(ctx) && p.checkAgentHealth(c.IP) {
 			alive = append(alive, c)
 		} else {
 			p.logger.Warn("Removing dead container from pool", "id", c.ID)
@@ -214,6 +280,23 @@ func (p *Pool) healthCheck() {
 	}
 
 	p.idleContainers = alive
+	monitor.PoolIdleCount.Set(float64(len(p.idleContainers)))
+}
+
+// 通过 TCP 探活 agent
+func (p *Pool) checkAgentHealth(ip string) bool {
+	if p.config.DisableHealthCheck {
+		return true
+	}
+	if ip == "" {
+		return false
+	}
+	conn, err := net.DialTimeout("tcp", ip+":50051", 1*time.Second)
+	if err != nil {
+		return false
+	}
+	conn.Close()
+	return true
 }
 
 func (p *Pool) maintainPool() {
@@ -279,6 +362,7 @@ TokenLoop:
 			container, err := p.createWarmContainer(ctx)
 			if err != nil {
 				p.logger.Error("Failed to replenish pool", "error", err)
+				monitor.ContainerCreationErrors.Inc()
 				newCount := atomic.AddInt32(&failureCount, 1)
 				if newCount >= 3 {
 					p.mu.Lock()
@@ -300,6 +384,7 @@ TokenLoop:
 			if len(p.idleContainers) < p.config.MinIdle &&
 				p.managedCount <= p.config.MaxBurst {
 				p.idleContainers = append(p.idleContainers, container)
+				monitor.PoolIdleCount.Inc()
 				p.mu.Unlock()
 				// 返回一个使用+创建名额
 				p.availableCh <- struct{}{}

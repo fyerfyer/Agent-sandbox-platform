@@ -1,0 +1,43 @@
+syntax = "proto3";
+package agent;
+option go_package = "platform/internal/agentproto";
+
+service AgentService {
+  rpc RunStep (RunRequest) returns (stream AgentEvent);
+  rpc Health (Ping) returns (Pong);
+}
+
+message RunRequest {
+  string session_id = 1;
+  string input_text = 2;
+  map<string, string> env_vars = 3;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_THOUGHT = 1;
+  EVENT_TYPE_TOOL_CALL = 2;
+  EVENT_TYPE_TOOL_RESULT = 3;
+  EVENT_TYPE_ANSWER = 4;
+  EVENT_TYPE_ERROR = 5;
+}
+
+enum ServiceStatus {
+  SERVICE_STATUS_UNSPECIFIED = 0;
+  SERVICE_STATUS_OK = 1;
+  SERVICE_STATUS_BUSY = 2;
+}
+
+message AgentEvent {
+  EventType type = 1; 
+  string content = 2;
+  string source = 3;
+  int64 timestamp = 4;
+  string metadata_json = 5;
+}
+
+message Ping {}
+
+message Pong {
+  ServiceStatus status = 1; 
+}
