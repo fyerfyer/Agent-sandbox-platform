@@ -50,11 +50,12 @@ func NewServer(cfg *config.Config, deps *Dependency) *Server {
 	sessionRepo := repo.NewRepository(deps.PG, deps.Redis)
 	sessionMgr := session.NewSessionManager(pool, sessionRepo, deps.Redis, deps.AsynqClient, logger)
 	disp := dispatcher.NewDispatcher(bus, logger)
-	svc := service.NewService(sessionMgr, sessionRepo, disp, bus, deps.Docker, logger)
+	companions := service.NewCompanionManager(deps.Docker, cfg.Pool.NetworkName, logger)
+	svc := service.NewService(sessionMgr, sessionRepo, disp, bus, deps.Docker, logger, cfg.Pool.HostRoot, companions)
 
 	sessionWorker := worker.NewSessionTaskWorker(pool, sessionRepo, bus, worker.WorkerConfig{
 		ProjectDir: cfg.Worker.ProjectDir,
-	})
+	}, logger)
 
 	asynqServer := asynq.NewServer(deps.AsynqRedis, asynq.Config{
 		Concurrency: cfg.Worker.Concurrency,

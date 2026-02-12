@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -54,7 +55,7 @@ type MetricsConfig struct {
 	Addr string
 }
 
-// Load reads configuration from environment variables with sensible defaults.
+// Load 加载配置
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -79,12 +80,12 @@ func Load() *Config {
 			WarmupImage:         getEnv("POOL_WARMUP_IMAGE", "agent-runtime:latest"),
 			HealthCheckInterval: getDurationEnv("POOL_HEALTH_CHECK_INTERVAL", 30*time.Second),
 			NetworkName:         getEnv("POOL_NETWORK_NAME", "agent-platform-net"),
-			HostRoot:            getEnv("POOL_HOST_ROOT", "/var/agent-platform/projects"),
+			HostRoot:            getEnv("POOL_HOST_ROOT", defaultHostRoot()),
 			ContainerMem:        int64(getIntEnv("POOL_CONTAINER_MEM_MB", 512)),
 			ContainerCPU:        getFloatEnv("POOL_CONTAINER_CPU", 0.5),
 		},
 		Worker: WorkerConfig{
-			ProjectDir:  getEnv("WORKER_PROJECT_DIR", "/var/agent-platform/projects"),
+			ProjectDir:  getEnv("WORKER_PROJECT_DIR", defaultProjectDir()),
 			Concurrency: getIntEnv("WORKER_CONCURRENCY", 5),
 		},
 		Metrics: MetricsConfig{
@@ -125,4 +126,22 @@ func getDurationEnv(key string, defaultVal time.Duration) time.Duration {
 		}
 	}
 	return defaultVal
+}
+
+// defaultHostRoot 返回一个用户可写的默认路径，用于冷容器的绑定挂载。
+func defaultHostRoot() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/agent-platform/projects"
+	}
+	return filepath.Join(home, ".agent-platform", "projects")
+}
+
+// defaultProjectDir 返回一个用户可写的默认路径，用于 Worker 使用的项目文件。
+func defaultProjectDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/agent-platform/projects"
+	}
+	return filepath.Join(home, ".agent-platform", "projects")
 }

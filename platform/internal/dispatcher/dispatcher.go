@@ -78,12 +78,26 @@ func (d *Dispatcher) Dispatch(ctx context.Context, container *sandbox.Container,
 		InputText: input,
 	}
 
-	stream, err := client.RunStep(ctx, req)
+	// 使用后台上下文作为 gRPC 流的上下文，避免在 HTTP 请求处理返回时被取消。
+	// 该流必须比短时的 POST /chat 请求存活更久。
+	streamCtx := context.Background()
+
+	stream, err := client.RunStep(streamCtx, req)
 	if err != nil {
 		return fmt.Errorf("failed to start run step: %w", err)
 	}
 
 	go func() {
+		defer func() {
+			// 发布一个 stream-done 事件，以便 SSE 处理程序可以优雅地关闭
+			// 而不是在代理完成后在 Redis 订阅上挂起。
+			d.bus.Publish(streamCtx, container.Config.SessionID, eventbus.Event{
+				Type:      eventbus.EventStreamDone,
+				SessionID: container.Config.SessionID,
+				Payload:   map[string]string{"text": "stream completed"},
+				Timestamp: time.Now(),
+			})
+		}()
 		for {
 			resp, err := stream.Recv()
 			if err == io.EOF {
@@ -100,17 +114,33 @@ func (d *Dispatcher) Dispatch(ctx context.Context, container *sandbox.Container,
 			event := eventbus.Event{
 				Type:      mapProtoEventType(resp.Type),
 				SessionID: container.Config.SessionID,
-				Payload:   resp,
+				Payload:   buildPayload(resp),
 				Timestamp: time.Now(),
 			}
 
-			if err := d.bus.Publish(ctx, container.Config.SessionID, event); err != nil {
+			if err := d.bus.Publish(streamCtx, container.Config.SessionID, event); err != nil {
 				d.logger.Error("Failed to publish event", "error", err, "session_id", container.Config.SessionID)
 			}
 		}
 	}()
 
 	return nil
+}
+
+func (d *Dispatcher) Configure(ctx context.Context, container *sandbox.Container, req *agentproto.ConfigureRequest) (*agentproto.ConfigureResponse, error) {
+	client, err := d.GetClient(ctx, container)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get agent client: %w", err)
+	}
+	return client.Configure(ctx, req)
+}
+
+func (d *Dispatcher) Stop(ctx context.Context, container *sandbox.Container, sessionID string) (*agentproto.StopResponse, error) {
+	client, err := d.GetClient(ctx, container)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get agent client: %w", err)
+	}
+	return client.Stop(ctx, &agentproto.StopRequest{SessionId: sessionID})
 }
 
 func (d *Dispatcher) publishError(sessionID string, err error) {

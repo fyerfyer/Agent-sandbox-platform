@@ -37,8 +37,24 @@ func NewRouter(svc *service.Service) *gin.Engine {
 			sessions.DELETE("/:id", sessionHandler.TerminateSession)
 			sessions.GET("/:id/health", sessionHandler.HealthCheckSession)
 			sessions.GET("/:id/wait", sessionHandler.WaitReady)
+
+			// Agent configuration & control
+			sessions.POST("/:id/configure", sessionHandler.ConfigureAgent)
+			sessions.POST("/:id/stop", sessionHandler.StopAgent)
+
+			// Chat
 			sessions.POST("/:id/chat", chatHandler.SendMessage)
 			sessions.GET("/:id/stream", chatHandler.StreamEvents)
+
+			// File operations
+			sessions.POST("/:id/sync", sessionHandler.SyncFiles)
+			sessions.GET("/:id/files", sessionHandler.ListFiles)
+			sessions.GET("/:id/files/read", sessionHandler.ReadFile)
+
+			// Companion service management
+			sessions.POST("/:id/services", sessionHandler.CreateService)
+			sessions.GET("/:id/services", sessionHandler.ListServices)
+			sessions.DELETE("/:id/services/:service_id", sessionHandler.RemoveService)
 		}
 	}
 

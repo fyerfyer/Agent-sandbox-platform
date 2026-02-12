@@ -19,15 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentService_RunStep_FullMethodName = "/agent.AgentService/RunStep"
-	AgentService_Health_FullMethodName  = "/agent.AgentService/Health"
+	AgentService_Configure_FullMethodName = "/agent.AgentService/Configure"
+	AgentService_RunStep_FullMethodName   = "/agent.AgentService/RunStep"
+	AgentService_Stop_FullMethodName      = "/agent.AgentService/Stop"
+	AgentService_Health_FullMethodName    = "/agent.AgentService/Health"
 )
 
 // AgentServiceClient is the client API for AgentService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AgentServiceClient interface {
+	// Configure the agent with system prompt, tools, and settings.
+	// Must be called before RunStep to set up the agent for a session.
+	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error)
+	// Main entry point: run an agent step with user input.
 	RunStep(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AgentEvent], error)
+	// Stop/interrupt a running agent step.
+	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error)
+	// Health check.
 	Health(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error)
 }
 
@@ -37,6 +46,16 @@ type agentServiceClient struct {
 
 func NewAgentServiceClient(cc grpc.ClientConnInterface) AgentServiceClient {
 	return &agentServiceClient{cc}
+}
+
+func (c *agentServiceClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*ConfigureResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ConfigureResponse)
+	err := c.cc.Invoke(ctx, AgentService_Configure_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *agentServiceClient) RunStep(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AgentEvent], error) {
@@ -58,6 +77,16 @@ func (c *agentServiceClient) RunStep(ctx context.Context, in *RunRequest, opts .
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentService_RunStepClient = grpc.ServerStreamingClient[AgentEvent]
 
+func (c *agentServiceClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StopResponse)
+	err := c.cc.Invoke(ctx, AgentService_Stop_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentServiceClient) Health(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Pong)
@@ -72,7 +101,14 @@ func (c *agentServiceClient) Health(ctx context.Context, in *Ping, opts ...grpc.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility.
 type AgentServiceServer interface {
+	// Configure the agent with system prompt, tools, and settings.
+	// Must be called before RunStep to set up the agent for a session.
+	Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error)
+	// Main entry point: run an agent step with user input.
 	RunStep(*RunRequest, grpc.ServerStreamingServer[AgentEvent]) error
+	// Stop/interrupt a running agent step.
+	Stop(context.Context, *StopRequest) (*StopResponse, error)
+	// Health check.
 	Health(context.Context, *Ping) (*Pong, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
@@ -84,8 +120,14 @@ type AgentServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAgentServiceServer struct{}
 
+func (UnimplementedAgentServiceServer) Configure(context.Context, *ConfigureRequest) (*ConfigureResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Configure not implemented")
+}
 func (UnimplementedAgentServiceServer) RunStep(*RunRequest, grpc.ServerStreamingServer[AgentEvent]) error {
 	return status.Error(codes.Unimplemented, "method RunStep not implemented")
+}
+func (UnimplementedAgentServiceServer) Stop(context.Context, *StopRequest) (*StopResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Stop not implemented")
 }
 func (UnimplementedAgentServiceServer) Health(context.Context, *Ping) (*Pong, error) {
 	return nil, status.Error(codes.Unimplemented, "method Health not implemented")
@@ -111,6 +153,24 @@ func RegisterAgentServiceServer(s grpc.ServiceRegistrar, srv AgentServiceServer)
 	s.RegisterService(&AgentService_ServiceDesc, srv)
 }
 
+func _AgentService_Configure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).Configure(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_Configure_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).Configure(ctx, req.(*ConfigureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentService_RunStep_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(RunRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -121,6 +181,24 @@ func _AgentService_RunStep_Handler(srv interface{}, stream grpc.ServerStream) er
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type AgentService_RunStepServer = grpc.ServerStreamingServer[AgentEvent]
+
+func _AgentService_Stop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).Stop(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_Stop_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).Stop(ctx, req.(*StopRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
 
 func _AgentService_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Ping)
@@ -147,6 +225,14 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "agent.AgentService",
 	HandlerType: (*AgentServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Configure",
+			Handler:    _AgentService_Configure_Handler,
+		},
+		{
+			MethodName: "Stop",
+			Handler:    _AgentService_Stop_Handler,
+		},
 		{
 			MethodName: "Health",
 			Handler:    _AgentService_Health_Handler,

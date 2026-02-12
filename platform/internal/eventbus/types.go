@@ -16,7 +16,12 @@ const (
 	EventAgentToolResult EventType = "agent.tool_result"
 	EventAgentAnswer     EventType = "agent.answer"
 	EventAgentError      EventType = "agent.error"
+	EventAgentStatus     EventType = "agent.status"
 	EventAgentUnknown    EventType = "agent.unknown"
+
+	// EventStreamDone 由调度器在 gRPC 流结束时发布（无论是正常结束还是发生错误）。
+	// SSE 处理程序使用该事件来优雅关闭连接。
+	EventStreamDone EventType = "stream.done"
 )
 
 type Event struct {

@@ -1,0 +1,10 @@
+grpcio
+protobuf
+openai
+python-dotenv
+pydantic
+pydantic-settings
+pyyaml
+tenacity
+grpcio-tools
+httpx

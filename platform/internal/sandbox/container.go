@@ -130,15 +130,21 @@ func (c *Container) Start(ctx context.Context) error {
 	// 确保工作目录存在
 	if c.HostPath != "" {
 		if err := os.MkdirAll(c.HostPath, 0755); err != nil {
-			return fmt.Errorf("failed to create host path: %w", err)
+			return fmt.Errorf("failed to create host path %q: %w (hint: ensure the path is writable or set POOL_HOST_ROOT to a writable directory)", c.HostPath, err)
 		}
 	}
 
 	name := ContainerName(c.Config.SessionID)
 
+	// 使用可配置 Cmd 命令
+	cmd := c.Config.Cmd
+	if len(cmd) == 0 {
+		cmd = nil
+	}
+
 	config := &container.Config{
 		Image:      c.Config.Image,
-		Cmd:        []string{"tail", "-f", "/dev/null"},
+		Cmd:        cmd,
 		Env:        c.Config.EnvVars,
 		WorkingDir: c.MountPath,
 		Labels: map[string]string{
@@ -148,6 +154,9 @@ func (c *Container) Start(ctx context.Context) error {
 		},
 	}
 
+	// 启用 host.docker.internal 支持，让容器内 Agent 可以回调到宿主机上的 Go Platform 服务
+	extraHosts := []string{"host.docker.internal:host-gateway"}
+
 	var hostConfig *container.HostConfig
 	if c.Config.UseAnonymousVol {
 		hostConfig = &container.HostConfig{
@@ -156,6 +165,7 @@ func (c *Container) Start(ctx context.Context) error {
 				NanoCPUs: int64(c.Config.CPULimit * 1e9),
 			},
 			AutoRemove: false,
+			ExtraHosts: extraHosts,
 			Tmpfs: map[string]string{
 				"/app/workspace": "rw,size=512m",
 			},
@@ -170,6 +180,7 @@ func (c *Container) Start(ctx context.Context) error {
 				NanoCPUs: int64(c.Config.CPULimit * 1e9),
 			},
 			AutoRemove: false,
+			ExtraHosts: extraHosts,
 		}
 	}
 

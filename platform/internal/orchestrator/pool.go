@@ -263,8 +263,10 @@ func (p *Pool) healthCheck() {
 
 	alive := make([]*sandbox.Container, 0, len(p.idleContainers))
 	for _, c := range p.idleContainers {
-		// 增加 TCP Dial 检查
-		if c.IsRunning(ctx) && p.checkAgentHealth(c.IP) {
+		// Warm Container 还没有启动其 Agent 服务器，
+		// 因此只检查容器进程是否仍在运行。
+		// Agent 的健康检查仅在 worker 在容器内，启动 gRPC 服务器之后才适用。
+		if c.IsRunning(ctx) {
 			alive = append(alive, c)
 		} else {
 			p.logger.Warn("Removing dead container from pool", "id", c.ID)
@@ -411,6 +413,7 @@ func (p *Pool) createWarmContainer(ctx context.Context) (*sandbox.Container, err
 
 	cfg := sandbox.ContainerConfig{
 		Image:           p.config.WarmupImage,
+		Cmd:             []string{"tail", "-f", "/dev/null"}, // Keep alive; gRPC server started later by worker
 		MemoryLimit:     p.config.ContainerMem * 1024 * 1024,
 		CPULimit:        p.config.ContainerCPU,
 		UseAnonymousVol: true,

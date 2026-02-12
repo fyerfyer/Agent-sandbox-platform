@@ -294,7 +294,7 @@ func TestSessionWorker(t *testing.T) {
 
 	w := worker.NewSessionTaskWorker(p, r, bus, worker.WorkerConfig{
 		ProjectDir: tmpDir,
-	})
+	}, h.logger)
 
 	// Test Warm Strategy
 	t.Run("WarmStrategy", func(t *testing.T) {
@@ -515,7 +515,7 @@ func TestSessionManager(t *testing.T) {
 
 		w := worker.NewSessionTaskWorker(p, r, bus, worker.WorkerConfig{
 			ProjectDir: tmpDir,
-		})
+		}, h.logger)
 
 		params := session.SessionParams{
 			ProjectID: "proj-mgr-e2e",

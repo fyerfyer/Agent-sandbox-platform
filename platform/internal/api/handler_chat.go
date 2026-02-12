@@ -3,7 +3,9 @@ package api
 import (
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
+	"platform/internal/eventbus"
 	"platform/internal/service"
 	"time"
 
@@ -53,17 +55,29 @@ func (h *ChatHandler) StreamEvents(c *gin.Context) {
 		return
 	}
 
-	// Set SSE headers
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
 
+	// 对于这个长时间存在的 SSE 连接，禁用服务器级别的 WriteTimeout。
+	// 否则 http.Server.WriteTimeout（默认 120s）会在传输过程中强行关闭 TCP 连接
+	// 导致客户端出现 IncompleteRead。
+	rc := http.NewResponseController(c.Writer)
+	if err := rc.SetWriteDeadline(time.Time{}); err != nil {
+		slog.Warn("Failed to disable write deadline for SSE", "error", err)
+	}
+
 	c.Stream(func(w io.Writer) bool {
 		select {
 		case event, ok := <-eventCh:
 			if !ok {
-				// Channel closed, stream ended
+				// 事件通道关闭，结束 SSE 连接
+				return false
+			}
+
+			// stream.done 内部信号，关闭 SSE 连接
+			if event.Type == eventbus.EventStreamDone {
 				return false
 			}
 

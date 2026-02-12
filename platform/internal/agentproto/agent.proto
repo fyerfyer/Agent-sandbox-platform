@@ -3,15 +3,62 @@ package agent;
 option go_package = "platform/internal/agentproto";
 
 service AgentService {
+  // Configure the agent with system prompt, tools, and settings.
+  // Must be called before RunStep to set up the agent for a session.
+  rpc Configure (ConfigureRequest) returns (ConfigureResponse);
+
+  // Main entry point: run an agent step with user input.
   rpc RunStep (RunRequest) returns (stream AgentEvent);
+
+  // Stop/interrupt a running agent step.
+  rpc Stop (StopRequest) returns (StopResponse);
+
+  // Health check.
   rpc Health (Ping) returns (Pong);
 }
+
+// ─── Configure ───────────────────────────────────────────────
+
+message ConfigureRequest {
+  string session_id = 1;
+  string system_prompt = 2;
+  repeated ToolDef tools = 3;           // additional tool definitions
+  map<string, string> agent_config = 4; // e.g. {"max_loops":"10","agent_type":"react"}
+  repeated string builtin_tools = 5;    // names of built-in tools to enable: "bash","file_read","file_write","list_files"
+}
+
+message ConfigureResponse {
+  bool success = 1;
+  string message = 2;
+  repeated string available_tools = 3;  // tool names that are now active
+}
+
+message ToolDef {
+  string name = 1;
+  string description = 2;
+  string parameters_json = 3; // JSON Schema describing the tool parameters
+}
+
+// ─── RunStep ─────────────────────────────────────────────────
 
 message RunRequest {
   string session_id = 1;
   string input_text = 2;
   map<string, string> env_vars = 3;
 }
+
+// ─── Stop ────────────────────────────────────────────────────
+
+message StopRequest {
+  string session_id = 1;
+}
+
+message StopResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ─── Events ──────────────────────────────────────────────────
 
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;
@@ -20,6 +67,7 @@ enum EventType {
   EVENT_TYPE_TOOL_RESULT = 3;
   EVENT_TYPE_ANSWER = 4;
   EVENT_TYPE_ERROR = 5;
+  EVENT_TYPE_STATUS = 6;     // status updates (e.g. "configuring", "tool registered")
 }
 
 enum ServiceStatus {

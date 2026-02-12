@@ -17,6 +17,26 @@ type ChatRequest struct {
 	Message string `json:"message" binding:"required"`
 }
 
+// ConfigureAgentRequest configures the agent inside a session's container.
+type ConfigureAgentRequest struct {
+	SystemPrompt string            `json:"system_prompt"`
+	BuiltinTools []string          `json:"builtin_tools"` // e.g. ["bash","file_read","file_write","list_files"]
+	Tools        []ToolDefRequest  `json:"tools"`         // extra user-defined tools
+	AgentConfig  map[string]string `json:"agent_config"`  // e.g. {"max_loops":"10"}
+}
+
+type ToolDefRequest struct {
+	Name           string `json:"name" binding:"required"`
+	Description    string `json:"description"`
+	ParametersJSON string `json:"parameters_json"` // JSON Schema string
+}
+
+// SyncFilesRequest triggers copying files from container to host.
+type SyncFilesRequest struct {
+	SrcPath  string `json:"src_path"`  // path inside container (default: /app/workspace/)
+	DestPath string `json:"dest_path"` // relative to project dir on host (default: root)
+}
+
 type SessionResponse struct {
 	ID          string `json:"id"`
 	ProjectID   string `json:"project_id"`
@@ -33,6 +53,29 @@ type ChatResponse struct {
 	SessionID string `json:"session_id"`
 }
 
+type ConfigureAgentResponse struct {
+	Success        bool     `json:"success"`
+	Message        string   `json:"message"`
+	AvailableTools []string `json:"available_tools"`
+}
+
+type SyncFilesResponse struct {
+	Status    string `json:"status"`
+	SessionID string `json:"session_id"`
+	Message   string `json:"message,omitempty"`
+}
+
+type FilesListResponse struct {
+	SessionID string `json:"session_id"`
+	Output    string `json:"output"`
+}
+
+type FileContentResponse struct {
+	SessionID string `json:"session_id"`
+	Path      string `json:"path"`
+	Content   string `json:"content"`
+}
+
 type HealthResponse struct {
 	Status    string `json:"status"`
 	Timestamp string `json:"timestamp"`
@@ -42,6 +85,27 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Code    int    `json:"code"`
 	Details string `json:"details,omitempty"`
+}
+
+type CreateServiceAPIRequest struct {
+	Name    string   `json:"name" binding:"required"`
+	Image   string   `json:"image" binding:"required"`
+	EnvVars []string `json:"env_vars"`
+	Cmd     []string `json:"cmd"`
+}
+
+type ServiceResponse struct {
+	ServiceID string `json:"service_id"`
+	Name      string `json:"name"`
+	Image     string `json:"image"`
+	IP        string `json:"ip"`
+	Status    string `json:"status"`
+	SessionID string `json:"session_id"`
+}
+
+type ServiceListResponse struct {
+	SessionID string            `json:"session_id"`
+	Services  []ServiceResponse `json:"services"`
 }
 
 // SSEEvent 是服务器发送事件的结构体

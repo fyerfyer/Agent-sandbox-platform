@@ -10,6 +10,7 @@ type ContainerConfig struct {
 	ProjectID       string
 	SessionID       string
 	Image           string
+	Cmd             []string // 要在容器中运行的命令
 	EnvVars         []string
 	MemoryLimit     int64   // 内存限制（字节）
 	CPULimit        float64 // CPU 核心数（如 0.5, 1, 2）
