@@ -20,6 +20,8 @@ func mapProtoEventType(t agentproto.EventType) eventbus.EventType {
 		return eventbus.EventAgentToolResult
 	case agentproto.EventType_EVENT_TYPE_STATUS:
 		return eventbus.EventAgentStatus
+	case agentproto.EventType_EVENT_TYPE_TEXT_CHUNK:
+		return eventbus.EventAgentTextChunk
 	default:
 		return eventbus.EventAgentUnknown
 	}

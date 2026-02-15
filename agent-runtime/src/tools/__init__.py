@@ -8,12 +8,16 @@ from src.tools.file_tool import (
   LIST_FILES_TOOL_SCHEMA,
 )
 from src.tools.platform_tool import (
-  create_service,
-  remove_service,
   export_files,
-  CREATE_SERVICE_TOOL_SCHEMA,
-  REMOVE_SERVICE_TOOL_SCHEMA,
   EXPORT_FILES_TOOL_SCHEMA,
+)
+from src.tools.compose_tool import (
+  create_compose_stack,
+  teardown_compose_stack,
+  get_compose_stack,
+  CREATE_COMPOSE_STACK_TOOL_SCHEMA,
+  TEARDOWN_COMPOSE_STACK_TOOL_SCHEMA,
+  GET_COMPOSE_STACK_TOOL_SCHEMA,
 )
 
 # name -> (openai-function-schema, async executor)
@@ -34,17 +38,21 @@ TOOL_REGISTRY: dict = {
     "schema": LIST_FILES_TOOL_SCHEMA,
     "executor": list_files,
   },
-  "create_service": {
-    "schema": CREATE_SERVICE_TOOL_SCHEMA,
-    "executor": create_service,
-  },
-  "remove_service": {
-    "schema": REMOVE_SERVICE_TOOL_SCHEMA,
-    "executor": remove_service,
-  },
   "export_files": {
     "schema": EXPORT_FILES_TOOL_SCHEMA,
     "executor": export_files,
+  },
+  "create_compose_stack": {
+    "schema": CREATE_COMPOSE_STACK_TOOL_SCHEMA,
+    "executor": create_compose_stack,
+  },
+  "teardown_compose_stack": {
+    "schema": TEARDOWN_COMPOSE_STACK_TOOL_SCHEMA,
+    "executor": teardown_compose_stack,
+  },
+  "get_compose_stack": {
+    "schema": GET_COMPOSE_STACK_TOOL_SCHEMA,
+    "executor": get_compose_stack,
   },
 }
 

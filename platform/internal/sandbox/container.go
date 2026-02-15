@@ -159,6 +159,10 @@ func (c *Container) Start(ctx context.Context) error {
 
 	var hostConfig *container.HostConfig
 	if c.Config.UseAnonymousVol {
+		// 使用匿名 Docker Volume 而非 tmpfs。
+		// tmpfs 挂载会导致 Docker CopyToContainer API 写入的文件被 tmpfs 层遮挡，
+		// 容器内进程无法看到写入的文件（如 .env）。匿名 Volume 则由 Docker 管理，
+		// CopyToContainer 能正确写入。
 		hostConfig = &container.HostConfig{
 			Resources: container.Resources{
 				Memory:   c.Config.MemoryLimit,
@@ -166,9 +170,10 @@ func (c *Container) Start(ctx context.Context) error {
 			},
 			AutoRemove: false,
 			ExtraHosts: extraHosts,
-			Tmpfs: map[string]string{
-				"/app/workspace": "rw,size=512m",
-			},
+		}
+		// 在 Config 中声明匿名卷，Docker 会自动创建
+		config.Volumes = map[string]struct{}{
+			c.MountPath: {},
 		}
 	} else {
 		hostConfig = &container.HostConfig{

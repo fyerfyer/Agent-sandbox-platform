@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     extra="ignore",
   )
 
-  PORT: int = 50051
+  GRPC_PORT: int = 50051
 
   DEEPSEEK_API_KEY: str = ""
   DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
@@ -57,6 +57,13 @@ class Settings(BaseSettings):
   MAX_LOOPS: int = 15
 
   WORKSPACE_DIR: str = "/app/workspace"
+
+  # Platform callback URL (used by create_service / export_files tools)
+  # Default uses host.docker.internal which is set up by the Go platform.
+  PLATFORM_API_URL: str = "http://host.docker.internal:8080"
+
+  # Session ID — injected dynamically by the agent on Configure.
+  SESSION_ID: str = ""
 
   @model_validator(mode="after")
   def _check_api_key(self) -> "Settings":

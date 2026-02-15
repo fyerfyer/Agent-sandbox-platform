@@ -28,6 +28,7 @@ type Service struct {
 	Logger      *slog.Logger
 	HostRoot    string // 宿主机项目根目录，用于文件同步
 	Companions  *CompanionManager
+	Compose     *ComposeManager
 }
 
 func NewService(
@@ -39,6 +40,7 @@ func NewService(
 	logger *slog.Logger,
 	hostRoot string,
 	companions *CompanionManager,
+	compose *ComposeManager,
 ) *Service {
 	return &Service{
 		SessionMgr:  sessionMgr,
@@ -49,6 +51,7 @@ func NewService(
 		Logger:      logger,
 		HostRoot:    hostRoot,
 		Companions:  companions,
+		Compose:     compose,
 	}
 }
 
@@ -68,6 +71,10 @@ func (s *Service) TerminateSession(ctx context.Context, id string) error {
 
 	if s.Companions != nil {
 		s.Companions.CleanupSession(ctx, id)
+	}
+
+	if s.Compose != nil {
+		s.Compose.CleanupSession(ctx, id)
 	}
 
 	s.Dispatcher.CleanUp(id)
@@ -364,4 +371,44 @@ func (s *Service) WaitForReady(ctx context.Context, sessionID string, pollInterv
 			}
 		}
 	}
+}
+
+// ── Compose Stack 管理 ──
+
+func (s *Service) CreateComposeStack(ctx context.Context, sessionID string, req CreateComposeRequest) (*ComposeStack, error) {
+	sess, err := s.SessionMgr.GetSession(ctx, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("session not found: %w", err)
+	}
+
+	if sess.Status != session.StatusReady && sess.Status != session.StatusRunning {
+		return nil, fmt.Errorf("session is not ready (status: %s)", sess.Status)
+	}
+
+	if s.Compose == nil {
+		return nil, fmt.Errorf("compose manager not initialized")
+	}
+
+	return s.Compose.CreateStack(ctx, sessionID, req)
+}
+
+func (s *Service) TeardownComposeStack(ctx context.Context, sessionID string) error {
+	if s.Compose == nil {
+		return fmt.Errorf("compose manager not initialized")
+	}
+	return s.Compose.TeardownStack(ctx, sessionID)
+}
+
+func (s *Service) GetComposeStack(sessionID string) *ComposeStack {
+	if s.Compose == nil {
+		return nil
+	}
+	return s.Compose.GetStack(sessionID)
+}
+
+func (s *Service) RefreshComposeStack(ctx context.Context, sessionID string) (*ComposeStack, error) {
+	if s.Compose == nil {
+		return nil, fmt.Errorf("compose manager not initialized")
+	}
+	return s.Compose.RefreshServices(ctx, sessionID)
 }

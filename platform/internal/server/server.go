@@ -51,10 +51,12 @@ func NewServer(cfg *config.Config, deps *Dependency) *Server {
 	sessionMgr := session.NewSessionManager(pool, sessionRepo, deps.Redis, deps.AsynqClient, logger)
 	disp := dispatcher.NewDispatcher(bus, logger)
 	companions := service.NewCompanionManager(deps.Docker, cfg.Pool.NetworkName, logger)
-	svc := service.NewService(sessionMgr, sessionRepo, disp, bus, deps.Docker, logger, cfg.Pool.HostRoot, companions)
+	compose := service.NewComposeManager(deps.Docker, cfg.Pool.NetworkName, "", logger)
+	svc := service.NewService(sessionMgr, sessionRepo, disp, bus, deps.Docker, logger, cfg.Pool.HostRoot, companions, compose)
 
 	sessionWorker := worker.NewSessionTaskWorker(pool, sessionRepo, bus, worker.WorkerConfig{
-		ProjectDir: cfg.Worker.ProjectDir,
+		ProjectDir:     cfg.Worker.ProjectDir,
+		PlatformAPIURL: "http://host.docker.internal" + cfg.Server.Addr,
 	}, logger)
 
 	asynqServer := asynq.NewServer(deps.AsynqRedis, asynq.Config{

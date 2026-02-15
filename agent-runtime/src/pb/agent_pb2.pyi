@@ -16,6 +16,7 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     EVENT_TYPE_ANSWER: _ClassVar[EventType]
     EVENT_TYPE_ERROR: _ClassVar[EventType]
     EVENT_TYPE_STATUS: _ClassVar[EventType]
+    EVENT_TYPE_TEXT_CHUNK: _ClassVar[EventType]
 
 class ServiceStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -29,6 +30,7 @@ EVENT_TYPE_TOOL_RESULT: EventType
 EVENT_TYPE_ANSWER: EventType
 EVENT_TYPE_ERROR: EventType
 EVENT_TYPE_STATUS: EventType
+EVENT_TYPE_TEXT_CHUNK: EventType
 SERVICE_STATUS_UNSPECIFIED: ServiceStatus
 SERVICE_STATUS_OK: ServiceStatus
 SERVICE_STATUS_BUSY: ServiceStatus

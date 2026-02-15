@@ -45,8 +45,8 @@ func (d *Dispatcher) GetClient(ctx context.Context, container *sandbox.Container
 	d.logger.Info("Dialing new agent", "ip", container.IP, "session_id", container.Config.SessionID)
 	target := fmt.Sprintf("%s:50051", container.IP)
 	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             3 * time.Second,
+		Time:                30 * time.Second,
+		Timeout:             10 * time.Second,
 		PermitWithoutStream: true,
 	}
 

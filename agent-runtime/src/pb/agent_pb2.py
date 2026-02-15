@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x61gent.proto\x12\x05\x61gent\"\xe7\x01\n\x10\x43onfigureRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x15\n\rsystem_prompt\x18\x02 \x01(\t\x12\x1d\n\x05tools\x18\x03 \x03(\x0b\x32\x0e.agent.ToolDef\x12>\n\x0c\x61gent_config\x18\x04 \x03(\x0b\x32(.agent.ConfigureRequest.AgentConfigEntry\x12\x15\n\rbuiltin_tools\x18\x05 \x03(\t\x1a\x32\n\x10\x41gentConfigEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"N\n\x11\x43onfigureResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x17\n\x0f\x61vailable_tools\x18\x03 \x03(\t\"E\n\x07ToolDef\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x17\n\x0fparameters_json\x18\x03 \x01(\t\"\x96\x01\n\nRunRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ninput_text\x18\x02 \x01(\t\x12\x30\n\x08\x65nv_vars\x18\x03 \x03(\x0b\x32\x1e.agent.RunRequest.EnvVarsEntry\x1a.\n\x0c\x45nvVarsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"!\n\x0bStopRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"0\n\x0cStopResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"w\n\nAgentEvent\x12\x1e\n\x04type\x18\x01 \x01(\x0e\x32\x10.agent.EventType\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x0e\n\x06source\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\x03\x12\x15\n\rmetadata_json\x18\x05 \x01(\t\"\x06\n\x04Ping\",\n\x04Pong\x12$\n\x06status\x18\x01 \x01(\x0e\x32\x14.agent.ServiceStatus*\xb9\x01\n\tEventType\x12\x1a\n\x16\x45VENT_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12\x45VENT_TYPE_THOUGHT\x10\x01\x12\x18\n\x14\x45VENT_TYPE_TOOL_CALL\x10\x02\x12\x1a\n\x16\x45VENT_TYPE_TOOL_RESULT\x10\x03\x12\x15\n\x11\x45VENT_TYPE_ANSWER\x10\x04\x12\x14\n\x10\x45VENT_TYPE_ERROR\x10\x05\x12\x15\n\x11\x45VENT_TYPE_STATUS\x10\x06*_\n\rServiceStatus\x12\x1e\n\x1aSERVICE_STATUS_UNSPECIFIED\x10\x00\x12\x15\n\x11SERVICE_STATUS_OK\x10\x01\x12\x17\n\x13SERVICE_STATUS_BUSY\x10\x02\x32\xd6\x01\n\x0c\x41gentService\x12>\n\tConfigure\x12\x17.agent.ConfigureRequest\x1a\x18.agent.ConfigureResponse\x12\x31\n\x07RunStep\x12\x11.agent.RunRequest\x1a\x11.agent.AgentEvent0\x01\x12/\n\x04Stop\x12\x12.agent.StopRequest\x1a\x13.agent.StopResponse\x12\"\n\x06Health\x12\x0b.agent.Ping\x1a\x0b.agent.PongB\x1eZ\x1cplatform/internal/agentprotob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x61gent.proto\x12\x05\x61gent\"\xe7\x01\n\x10\x43onfigureRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x15\n\rsystem_prompt\x18\x02 \x01(\t\x12\x1d\n\x05tools\x18\x03 \x03(\x0b\x32\x0e.agent.ToolDef\x12>\n\x0c\x61gent_config\x18\x04 \x03(\x0b\x32(.agent.ConfigureRequest.AgentConfigEntry\x12\x15\n\rbuiltin_tools\x18\x05 \x03(\t\x1a\x32\n\x10\x41gentConfigEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"N\n\x11\x43onfigureResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\x12\x17\n\x0f\x61vailable_tools\x18\x03 \x03(\t\"E\n\x07ToolDef\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x17\n\x0fparameters_json\x18\x03 \x01(\t\"\x96\x01\n\nRunRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x12\n\ninput_text\x18\x02 \x01(\t\x12\x30\n\x08\x65nv_vars\x18\x03 \x03(\x0b\x32\x1e.agent.RunRequest.EnvVarsEntry\x1a.\n\x0c\x45nvVarsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"!\n\x0bStopRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"0\n\x0cStopResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t\"w\n\nAgentEvent\x12\x1e\n\x04type\x18\x01 \x01(\x0e\x32\x10.agent.EventType\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\x12\x0e\n\x06source\x18\x03 \x01(\t\x12\x11\n\ttimestamp\x18\x04 \x01(\x03\x12\x15\n\rmetadata_json\x18\x05 \x01(\t\"\x06\n\x04Ping\",\n\x04Pong\x12$\n\x06status\x18\x01 \x01(\x0e\x32\x14.agent.ServiceStatus*\xd4\x01\n\tEventType\x12\x1a\n\x16\x45VENT_TYPE_UNSPECIFIED\x10\x00\x12\x16\n\x12\x45VENT_TYPE_THOUGHT\x10\x01\x12\x18\n\x14\x45VENT_TYPE_TOOL_CALL\x10\x02\x12\x1a\n\x16\x45VENT_TYPE_TOOL_RESULT\x10\x03\x12\x15\n\x11\x45VENT_TYPE_ANSWER\x10\x04\x12\x14\n\x10\x45VENT_TYPE_ERROR\x10\x05\x12\x15\n\x11\x45VENT_TYPE_STATUS\x10\x06\x12\x19\n\x15\x45VENT_TYPE_TEXT_CHUNK\x10\x07*_\n\rServiceStatus\x12\x1e\n\x1aSERVICE_STATUS_UNSPECIFIED\x10\x00\x12\x15\n\x11SERVICE_STATUS_OK\x10\x01\x12\x17\n\x13SERVICE_STATUS_BUSY\x10\x02\x32\xd6\x01\n\x0c\x41gentService\x12>\n\tConfigure\x12\x17.agent.ConfigureRequest\x1a\x18.agent.ConfigureResponse\x12\x31\n\x07RunStep\x12\x11.agent.RunRequest\x1a\x11.agent.AgentEvent0\x01\x12/\n\x04Stop\x12\x12.agent.StopRequest\x1a\x13.agent.StopResponse\x12\"\n\x06Health\x12\x0b.agent.Ping\x1a\x0b.agent.PongB\x1eZ\x1cplatform/internal/agentprotob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -37,9 +37,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_RUNREQUEST_ENVVARSENTRY']._loaded_options = None
   _globals['_RUNREQUEST_ENVVARSENTRY']._serialized_options = b'8\001'
   _globals['_EVENTTYPE']._serialized_start=821
-  _globals['_EVENTTYPE']._serialized_end=1006
-  _globals['_SERVICESTATUS']._serialized_start=1008
-  _globals['_SERVICESTATUS']._serialized_end=1103
+  _globals['_EVENTTYPE']._serialized_end=1033
+  _globals['_SERVICESTATUS']._serialized_start=1035
+  _globals['_SERVICESTATUS']._serialized_end=1130
   _globals['_CONFIGUREREQUEST']._serialized_start=23
   _globals['_CONFIGUREREQUEST']._serialized_end=254
   _globals['_CONFIGUREREQUEST_AGENTCONFIGENTRY']._serialized_start=204
@@ -62,6 +62,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_PING']._serialized_end=772
   _globals['_PONG']._serialized_start=774
   _globals['_PONG']._serialized_end=818
-  _globals['_AGENTSERVICE']._serialized_start=1106
-  _globals['_AGENTSERVICE']._serialized_end=1320
+  _globals['_AGENTSERVICE']._serialized_start=1133
+  _globals['_AGENTSERVICE']._serialized_end=1347
 # @@protoc_insertion_point(module_scope)

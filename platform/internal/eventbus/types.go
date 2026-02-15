@@ -17,6 +17,7 @@ const (
 	EventAgentAnswer     EventType = "agent.answer"
 	EventAgentError      EventType = "agent.error"
 	EventAgentStatus     EventType = "agent.status"
+	EventAgentTextChunk  EventType = "agent.text_chunk"
 	EventAgentUnknown    EventType = "agent.unknown"
 
 	// EventStreamDone 由调度器在 gRPC 流结束时发布（无论是正常结束还是发生错误）。

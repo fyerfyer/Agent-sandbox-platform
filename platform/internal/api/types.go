@@ -108,6 +108,27 @@ type ServiceListResponse struct {
 	Services  []ServiceResponse `json:"services"`
 }
 
+// ── Compose Stack types ──
+
+type CreateComposeAPIRequest struct {
+	ComposeContent string `json:"compose_content"` // docker-compose.yml 文件内容
+	ComposeFile    string `json:"compose_file"`    // 或宿主机上的文件路径（二选一）
+}
+
+type ComposeStackResponse struct {
+	SessionID   string                   `json:"session_id"`
+	ProjectName string                   `json:"project_name"`
+	Status      string                   `json:"status"`
+	Services    []ComposeServiceResponse `json:"services"`
+}
+
+type ComposeServiceResponse struct {
+	Name        string `json:"name"`
+	ContainerID string `json:"container_id"`
+	IP          string `json:"ip"`
+	Status      string `json:"status"`
+}
+
 // SSEEvent 是服务器发送事件的结构体
 type SSEEvent struct {
 	Type      string `json:"type"`

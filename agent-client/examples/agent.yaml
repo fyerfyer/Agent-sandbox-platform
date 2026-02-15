@@ -1,0 +1,32 @@
+platform:
+  api_base: http://localhost:8080
+  auto_start: true
+  startup_timeout_seconds: 45
+  root_dir: ../../platform
+
+runtime:
+  image: agent-runtime:latest
+  auto_build_image: true
+  root_dir: ../../agent-runtime
+
+session:
+  project_id: demo-project
+  user_id: demo-user
+  strategy: Cold-Strategy
+  env_vars:
+    DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+    DEEPSEEK_BASE_URL: https://api.deepseek.com
+    MODEL_NAME: deepseek-chat
+    MAX_LOOPS: "20"
+
+agent:
+  system_prompt: |
+    You are a practical coding assistant.
+  builtin_tools:
+    - bash
+    - file_read
+    - file_write
+    - list_files
+    - export_files
+  agent_config:
+    max_loops: "20"

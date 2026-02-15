@@ -20,29 +20,102 @@ SANDBOX_CONTEXT = (
   "You are operating inside a secure, isolated Docker sandbox.\n"
   "- Your workspace directory is: /app/workspace\n"
   "- All file operations are relative to this workspace.\n"
-  "- You can safely install packages, run code, and modify files — "
-  "the sandbox is disposable.\n"
-  "- After you finish your task, use the **export_files** tool to copy results "
+  "- The sandbox is disposable — you can freely run code and modify files.\n"
+  "- After you finish your task, use **export_files** to copy results "
   "back to the user's local machine.\n\n"
+
+  "## Pre-installed Runtimes & Tools\n"
+  "The following are **already installed** in this sandbox — do NOT attempt to install them:\n"
+  "- **Python 3.11** — `python3`, `pip`\n"
+  "- **Node.js 20 LTS** — `node`, `npm`, `npx`, `yarn`, `pnpm`\n"
+  "- **TypeScript** — `tsc`, `ts-node`\n"
+  "- **Build tools** — `gcc`, `g++`, `make`, `cmake`\n"
+  "- **Database client libraries** — `libpq` (PostgreSQL), `libmysqlclient` (MySQL/MariaDB)\n"
+  "- **Utilities** — `git`, `curl`, `wget`, `jq`, `tree`, `zip`/`unzip`\n\n"
+
+  "## Package Installation Rules\n"
+  "**CRITICAL: NEVER use `apt-get`, `apt`, `dpkg`, or `sudo apt` commands.**\n"
+  "System package management is disabled in this sandbox. All system libraries\n"
+  "you might need are already pre-installed (see above).\n\n"
+  "For language-specific packages, use:\n"
+  "- **Python** → `pip install <package>` (e.g., `pip install flask pandas`)\n"
+  "- **Node.js** → `npm install <package>` (e.g., `npm install express`)\n"
+  "- **Go** (if needed) → download the binary directly with `curl`\n\n"
+
+  "## External Dependencies (Databases, Caches, Message Queues, etc.)\n"
+  "**ALL external infrastructure MUST be defined via docker-compose.yml so that the user "
+  "can reproduce the entire environment with a single `docker compose up`.**\n\n"
+  "Follow these steps:\n"
+  "1. **Write a `docker-compose.yml`** in the workspace that declares every service "
+  "the project needs (e.g., PostgreSQL, Redis, MySQL, MongoDB, RabbitMQ, Kafka, etc.). "
+  "Every service definition MUST include:\n"
+  "   - `networks: [agent-platform-net]` so the service is reachable from this sandbox.\n"
+  "   - A `healthcheck` so the platform can verify readiness.\n"
+  "   - Sensible default environment variables (user, password, database name, etc.).\n"
+  "   Example:\n"
+  "   ```yaml\n"
+  "   services:\n"
+  "     db:\n"
+  "       image: postgres:15-alpine\n"
+  "       environment:\n"
+  "         POSTGRES_USER: appuser\n"
+  "         POSTGRES_PASSWORD: apppass\n"
+  "         POSTGRES_DB: appdb\n"
+  "       healthcheck:\n"
+  "         test: ['CMD-SHELL', 'pg_isready -U appuser -d appdb']\n"
+  "         interval: 2s\n"
+  "         timeout: 3s\n"
+  "         retries: 5\n"
+  "       networks:\n"
+  "         - agent-platform-net\n"
+  "     cache:\n"
+  "       image: redis:7-alpine\n"
+  "       healthcheck:\n"
+  "         test: ['CMD', 'redis-cli', 'ping']\n"
+  "         interval: 2s\n"
+  "         timeout: 3s\n"
+  "         retries: 5\n"
+  "       networks:\n"
+  "         - agent-platform-net\n"
+  "   networks:\n"
+  "     agent-platform-net:\n"
+  "       external: true\n"
+  "   ```\n\n"
+  "2. **Use `create_compose_stack`** to launch the docker-compose.yml. "
+  "The tool returns the IP addresses of every service.\n"
+  "3. **Use the returned IPs** (not `localhost`) to connect to services from your code.\n"
+  "4. **Test your application** end-to-end against the running services to verify correctness.\n"
+  "5. **Use `get_compose_stack`** if you need to re-check service IPs or status.\n"
+  "6. **Do NOT install service daemons locally** "
+  "(e.g., no `apt-get install postgresql`, no `brew install redis`).\n"
+  "7. **Do NOT use `teardown_compose_stack`** unless you are completely done with the task "
+  "and no longer need the services. The stack is automatically cleaned up when the session ends.\n\n"
+  "**Why docker-compose?** The user receives the entire project (including docker-compose.yml) "
+  "so they can reproduce the full environment with `docker compose up` — no manual setup needed.\n\n"
+
   "## Available Tools\n"
-  "- **bash**: Execute shell commands in the workspace (install packages, run tests, etc.)\n"
+  "- **bash**: Execute shell commands (run code, pip/npm install, run tests, etc.)\n"
   "- **file_read**: Read file contents in the workspace.\n"
   "- **file_write**: Create or overwrite files in the workspace.\n"
   "- **list_files**: List files and directories in the workspace.\n"
-  "- **export_files**: Export files from the container to the user's local machine. "
-  "Use this after completing your task so the user can access the results. "
-  "You can export the entire workspace or specific files/directories.\n"
-  "- **create_service**: Create a companion Docker container (e.g., PostgreSQL, Redis) "
-  "in the same network. Use this when your task requires external services.\n"
-  "- **remove_service**: Remove a previously created companion service container.\n\n"
+  "- **export_files**: Copy finished work to the user's local machine.\n"
+  "- **create_compose_stack**: Launch a docker-compose.yml to start infrastructure services.\n"
+  "- **get_compose_stack**: Check status & IPs of running compose services.\n"
+  "- **teardown_compose_stack**: Stop and remove all compose services (usually not needed).\n\n"
+
   "## Workflow\n"
   "1. Analyze the user's request carefully.\n"
   "2. Plan your approach step by step.\n"
-  "3. If you need external services (database, cache, etc.), use create_service first.\n"
-  "4. Use tools to implement your solution.\n"
-  "5. Verify correctness (run tests, check output).\n"
-  "6. Use **export_files** to copy finished work to the user's local machine.\n"
-  "7. Summarize what you've done.\n"
+  "3. If external services are needed, **write a docker-compose.yml first**, then "
+  "use **create_compose_stack** to launch it.\n"
+  "4. Use `pip install` or `npm install` for any missing language packages.\n"
+  "5. Implement your solution using the available tools.\n"
+  "6. **Verify correctness** — run your application against the compose services, run tests, "
+  "check output. Fix any issues before proceeding.\n"
+  "7. Ensure the project includes the docker-compose.yml so the user can reproduce it.\n"
+  "8. Use **export_files** to copy finished work to the user's local machine.\n"
+  "9. Summarize what you've done, including how to start the project "
+  "(`docker compose up` + run command).\n"
 )
 
 # 默认任务提示（当用户未提供 system_prompt 时使用）
@@ -116,6 +189,10 @@ class DefaultAgent(BaseAgent):
 
   async def step(self, input_text: str) -> AsyncGenerator[dict, None]:
     self._cancelled.clear()
+
+    # 修复 Tool Call 中断历史记录
+    self.memory.repair_history()
+
     self.memory.add_message("user", input_text)
 
     loops = 0
@@ -130,26 +207,38 @@ class DefaultAgent(BaseAgent):
 
       history = self.memory.get_history()
       try:
-        message = await self.llm.complete(
+        collected_content = None
+        tool_calls = None
+
+        async for chunk in self.llm.stream_complete(
           history,
           tools=self.tools if self.tools else None,
-        )
+        ):
+          if chunk["type"] == "content_delta":
+            yield {
+              "type": agent_pb2.EventType.EVENT_TYPE_TEXT_CHUNK,
+              "content": chunk["delta"],
+              "source": "llm",
+            }
+          elif chunk["type"] == "done":
+            collected_content = chunk["content"]
+            tool_calls = chunk["tool_calls"]
 
-        if message.tool_calls:
+        if tool_calls:
           self.memory.add_message(
             role="assistant",
-            content=message.content,
-            tool_calls=message.tool_calls,
+            content=collected_content,
+            tool_calls=tool_calls,
           )
 
-          if message.content:
+          if collected_content:
             yield {
               "type": agent_pb2.EventType.EVENT_TYPE_THOUGHT,
-              "content": message.content,
+              "content": collected_content,
               "source": "llm",
             }
 
-          for tool_call in message.tool_calls:
+          for tool_call in tool_calls:
             yield {
               "type": agent_pb2.EventType.EVENT_TYPE_TOOL_CALL,
               "content": f"Calling {tool_call.function.name} with {tool_call.function.arguments}",
@@ -182,10 +271,10 @@ class DefaultAgent(BaseAgent):
               tool_call_id=tool_call.id,
             )
         else:
-          self.memory.add_message("assistant", message.content)
+          self.memory.add_message("assistant", collected_content or "")
           yield {
             "type": agent_pb2.EventType.EVENT_TYPE_ANSWER,
-            "content": message.content,
+            "content": collected_content or "",
             "source": "llm",
           }
           return

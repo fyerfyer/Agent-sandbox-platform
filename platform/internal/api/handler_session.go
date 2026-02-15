@@ -340,3 +340,87 @@ func (h *SessionHandler) ListServices(c *gin.Context) {
 		Services:  respServices,
 	})
 }
+
+// CreateComposeStack POST /api/v1/sessions/:id/compose
+// Agent 通过 compose 文件创建一组基础设施服务（DooD 方式）
+func (h *SessionHandler) CreateComposeStack(c *gin.Context) {
+	id := c.Param("id")
+
+	var req CreateComposeAPIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondErrorWithDetails(c, http.StatusBadRequest, ErrInvalidRequest, err.Error())
+		return
+	}
+
+	stack, err := h.svc.CreateComposeStack(c.Request.Context(), id, service.CreateComposeRequest{
+		ComposeContent: req.ComposeContent,
+		ComposeFile:    req.ComposeFile,
+	})
+	if err != nil {
+		status := mapServiceError(err)
+		respondError(c, status, err)
+		return
+	}
+
+	var services []ComposeServiceResponse
+	for _, svc := range stack.Services {
+		services = append(services, ComposeServiceResponse{
+			Name:        svc.Name,
+			ContainerID: svc.ContainerID,
+			IP:          svc.IP,
+			Status:      svc.Status,
+		})
+	}
+
+	c.JSON(http.StatusCreated, ComposeStackResponse{
+		SessionID:   id,
+		ProjectName: stack.ProjectName,
+		Status:      stack.Status,
+		Services:    services,
+	})
+}
+
+// GetComposeStack GET /api/v1/sessions/:id/compose
+func (h *SessionHandler) GetComposeStack(c *gin.Context) {
+	id := c.Param("id")
+
+	stack, err := h.svc.RefreshComposeStack(c.Request.Context(), id)
+	if err != nil {
+		status := mapServiceError(err)
+		respondError(c, status, err)
+		return
+	}
+
+	var services []ComposeServiceResponse
+	for _, svc := range stack.Services {
+		services = append(services, ComposeServiceResponse{
+			Name:        svc.Name,
+			ContainerID: svc.ContainerID,
+			IP:          svc.IP,
+			Status:      svc.Status,
+		})
+	}
+
+	c.JSON(http.StatusOK, ComposeStackResponse{
+		SessionID:   id,
+		ProjectName: stack.ProjectName,
+		Status:      stack.Status,
+		Services:    services,
+	})
+}
+
+// TeardownComposeStack DELETE /api/v1/sessions/:id/compose
+func (h *SessionHandler) TeardownComposeStack(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := h.svc.TeardownComposeStack(c.Request.Context(), id); err != nil {
+		status := mapServiceError(err)
+		respondError(c, status, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":     "torn_down",
+		"session_id": id,
+	})
+}

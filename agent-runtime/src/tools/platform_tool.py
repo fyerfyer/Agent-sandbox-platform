@@ -117,7 +117,7 @@ async def create_service(
   **_kwargs: Any,
 ) -> str:
   session_id = settings.SESSION_ID or os.environ.get("SESSION_ID", "")
-  platform_url = settings.PLATFORM_API_URL or os.environ.get("PLATFORM_API_URL", "")
+  platform_url = settings.PLATFORM_API_URL
 
   if not session_id:
     return "[ERROR] SESSION_ID not set — cannot call Platform API."
@@ -164,7 +164,7 @@ async def remove_service(
 ) -> str:
   # TODO：调用 Go Platform API 删除一个伴随服务容器
   session_id = settings.SESSION_ID or os.environ.get("SESSION_ID", "")
-  platform_url = settings.PLATFORM_API_URL or os.environ.get("PLATFORM_API_URL", "")
+  platform_url = settings.PLATFORM_API_URL
 
   if not session_id:
     return "[ERROR] SESSION_ID not set — cannot call Platform API."
@@ -197,7 +197,7 @@ async def export_files(
   **_kwargs: Any,
 ) -> str:
   session_id = settings.SESSION_ID or os.environ.get("SESSION_ID", "")
-  platform_url = settings.PLATFORM_API_URL or os.environ.get("PLATFORM_API_URL", "")
+  platform_url = settings.PLATFORM_API_URL
 
   if not session_id:
     return "[ERROR] SESSION_ID not set — cannot call Platform API."

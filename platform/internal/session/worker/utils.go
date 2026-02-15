@@ -94,3 +94,8 @@ func GenerateEnvFile(envVars []string) io.Reader {
 	}
 	return strings.NewReader(sb.String())
 }
+
+// ensureDir 确保目录存在，如果不存在则创建（包括父目录）。
+func ensureDir(path string) error {
+	return os.MkdirAll(path, 0755)
+}

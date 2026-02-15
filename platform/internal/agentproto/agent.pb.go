@@ -31,6 +31,7 @@ const (
 	EventType_EVENT_TYPE_ANSWER      EventType = 4
 	EventType_EVENT_TYPE_ERROR       EventType = 5
 	EventType_EVENT_TYPE_STATUS      EventType = 6 // status updates (e.g. "configuring", "tool registered")
+	EventType_EVENT_TYPE_TEXT_CHUNK  EventType = 7 // streaming text chunk from LLM
 )
 
 // Enum value maps for EventType.
@@ -43,6 +44,7 @@ var (
 		4: "EVENT_TYPE_ANSWER",
 		5: "EVENT_TYPE_ERROR",
 		6: "EVENT_TYPE_STATUS",
+		7: "EVENT_TYPE_TEXT_CHUNK",
 	}
 	EventType_value = map[string]int32{
 		"EVENT_TYPE_UNSPECIFIED": 0,
@@ -52,6 +54,7 @@ var (
 		"EVENT_TYPE_ANSWER":      4,
 		"EVENT_TYPE_ERROR":       5,
 		"EVENT_TYPE_STATUS":      6,
+		"EVENT_TYPE_TEXT_CHUNK":  7,
 	}
 )
 
@@ -687,7 +690,7 @@ const file_internal_agentproto_agent_proto_rawDesc = "" +
 	"\rmetadata_json\x18\x05 \x01(\tR\fmetadataJson\"\x06\n" +
 	"\x04Ping\"4\n" +
 	"\x04Pong\x12,\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x14.agent.ServiceStatusR\x06status*\xb9\x01\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x14.agent.ServiceStatusR\x06status*\xd4\x01\n" +
 	"\tEventType\x12\x1a\n" +
 	"\x16EVENT_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12EVENT_TYPE_THOUGHT\x10\x01\x12\x18\n" +
@@ -695,7 +698,8 @@ const file_internal_agentproto_agent_proto_rawDesc = "" +
 	"\x16EVENT_TYPE_TOOL_RESULT\x10\x03\x12\x15\n" +
 	"\x11EVENT_TYPE_ANSWER\x10\x04\x12\x14\n" +
 	"\x10EVENT_TYPE_ERROR\x10\x05\x12\x15\n" +
-	"\x11EVENT_TYPE_STATUS\x10\x06*_\n" +
+	"\x11EVENT_TYPE_STATUS\x10\x06\x12\x19\n" +
+	"\x15EVENT_TYPE_TEXT_CHUNK\x10\a*_\n" +
 	"\rServiceStatus\x12\x1e\n" +
 	"\x1aSERVICE_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SERVICE_STATUS_OK\x10\x01\x12\x17\n" +

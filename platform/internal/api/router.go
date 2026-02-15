@@ -55,6 +55,11 @@ func NewRouter(svc *service.Service) *gin.Engine {
 			sessions.POST("/:id/services", sessionHandler.CreateService)
 			sessions.GET("/:id/services", sessionHandler.ListServices)
 			sessions.DELETE("/:id/services/:service_id", sessionHandler.RemoveService)
+
+			// Compose stack management (DooD)
+			sessions.POST("/:id/compose", sessionHandler.CreateComposeStack)
+			sessions.GET("/:id/compose", sessionHandler.GetComposeStack)
+			sessions.DELETE("/:id/compose", sessionHandler.TeardownComposeStack)
 		}
 	}
 

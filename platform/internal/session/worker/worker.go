@@ -18,7 +18,8 @@ import (
 var _ SessionWorker = (*SessionTaskWorker)(nil)
 
 type WorkerConfig struct {
-	ProjectDir string // 项目存储根目录，如 "/.../agent-platform/projects"
+	ProjectDir     string // 项目存储根目录，如 "/.../agent-platform/projects"
+	PlatformAPIURL string // 容器内 Agent 回调 Platform 的地址
 }
 
 type SessionTaskWorker struct {
@@ -53,6 +54,21 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		"project_id", payload.ProjectID,
 		"strategy", payload.Strategy,
 		"image", payload.Image)
+
+	// Auto-inject PLATFORM_API_URL so the Python agent can call back
+	// to the Go platform (e.g., create_service, export_files).
+	if w.config.PlatformAPIURL != "" {
+		hasURL := false
+		for _, v := range payload.EnvVars {
+			if len(v) > 17 && v[:17] == "PLATFORM_API_URL=" {
+				hasURL = true
+				break
+			}
+		}
+		if !hasURL {
+			payload.EnvVars = append(payload.EnvVars, "PLATFORM_API_URL="+w.config.PlatformAPIURL)
+		}
+	}
 
 	var strategy orchestrator.ContainerStrategy
 	switch payload.Strategy {
@@ -94,7 +110,14 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		"container_id", container.ID,
 		"container_ip", container.IP)
 
-	// 对于 Cold Strategy，需要等待容器内 gRPC 服务器启动完成
+	// 先保存容器信息（IP / ID），但还不标记 Ready
+	if err := w.repo.UpdateSessionContainerInfo(ctx, payload.SessionID, container.ID, container.IP); err != nil {
+		w.logger.Error("Failed to update container info", "session_id", payload.SessionID, "error", err)
+		w.repo.UpdateSessionStatus(ctx, payload.SessionID, session.StatusError)
+		return err
+	}
+
+	// ── 对于 Cold Strategy，等待容器内自启动的 gRPC 服务器就绪 ──
 	if _, ok := strategy.(*orchestrator.ColdStrategy); ok {
 		w.logger.Info("Waiting for cold container agent server to become ready",
 			"session_id", payload.SessionID, "container_id", container.ID)
@@ -111,30 +134,15 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		w.logger.Info("Cold container agent server is ready", "session_id", payload.SessionID)
 	}
 
-	if err := w.repo.UpdateSessionContainerInfo(ctx, payload.SessionID, container.ID, container.IP); err != nil {
-		w.logger.Error("Failed to update container info", "session_id", payload.SessionID, "error", err)
-		w.repo.UpdateSessionStatus(ctx, payload.SessionID, session.StatusError)
-		return err
-	}
-
-	if err := w.repo.UpdateSessionStatus(ctx, payload.SessionID, session.StatusReady); err != nil {
-		w.logger.Error("Failed to update session status to ready", "session_id", payload.SessionID, "error", err)
-		return err
-	}
-
-	w.bus.Publish(ctx, payload.SessionID, eventbus.Event{
-		Type: eventbus.EventSessionReady,
-		Payload: map[string]string{
-			"container_id": container.ID,
-			"node_ip":      container.IP,
-			"host_path":    container.HostPath,
-		},
-	})
-
-	// 对于 Warm Strategy，需要将项目文件同步到容器中
+	// ── 对于 Warm Strategy，先同步文件、启动 Agent，再标记 Ready ──
 	if _, ok := strategy.(*orchestrator.WarmStrategy); ok {
 		projectRoot := filepath.Join(w.config.ProjectDir, payload.ProjectID)
 		w.logger.Info("Syncing project files", "project_root", projectRoot, "session_id", payload.SessionID)
+
+		// 项目目录可能尚不存在（首次使用），创建空目录以避免 TarContext 失败
+		if err := ensureDir(projectRoot); err != nil {
+			w.logger.Warn("Failed to ensure project dir", "path", projectRoot, "error", err)
+		}
 
 		tarReader, err := TarContext(projectRoot)
 		if err != nil {
@@ -181,6 +189,21 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		}
 		w.logger.Info("Agent server started successfully", "session_id", payload.SessionID)
 	}
+
+	// ── Agent gRPC 服务器已就绪，标记 Session 为 Ready ──
+	if err := w.repo.UpdateSessionStatus(ctx, payload.SessionID, session.StatusReady); err != nil {
+		w.logger.Error("Failed to update session status to ready", "session_id", payload.SessionID, "error", err)
+		return err
+	}
+
+	w.bus.Publish(ctx, payload.SessionID, eventbus.Event{
+		Type: eventbus.EventSessionReady,
+		Payload: map[string]string{
+			"container_id": container.ID,
+			"node_ip":      container.IP,
+			"host_path":    container.HostPath,
+		},
+	})
 
 	w.logger.Info("Session create task completed", "session_id", payload.SessionID)
 	return nil

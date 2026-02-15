@@ -1,0 +1,27 @@
+[project]
+name = "agent-client"
+version = "0.1.0"
+description = "CLI client for Agent Platform sessions"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "typer>=0.12.5",
+  "rich>=13.9.4",
+  "httpx>=0.27.2",
+  "pydantic>=2.10.6",
+  "PyYAML>=6.0.2",
+  "python-dotenv>=1.0.1",
+]
+
+[project.scripts]
+agent-client = "agent_client.cli:app"
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
