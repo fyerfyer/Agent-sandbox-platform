@@ -1,6 +1,8 @@
 package api
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"platform/internal/agentproto"
 	"platform/internal/orchestrator"
@@ -19,7 +21,58 @@ func NewSessionHandler(svc *service.Service) *SessionHandler {
 	return &SessionHandler{svc: svc}
 }
 
-// CreateSession POST /api/v1/sessions
+func (h *SessionHandler) ListSessions(c *gin.Context) {
+	projectID := c.Query("project_id")
+
+	if projectID != "" {
+		sessions, err := h.svc.ListSessionsByProject(c.Request.Context(), projectID)
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, err)
+			return
+		}
+
+		var resp []SessionResponse
+		for _, sess := range sessions {
+			resp = append(resp, SessionResponse{
+				ID:          sess.ID,
+				ProjectID:   sess.ProjectID,
+				UserID:      sess.UserID,
+				ContainerID: sess.ContainerID,
+				NodeIP:      sess.NodeIP,
+				Status:      string(sess.Status),
+				Strategy:    string(sess.Strategy),
+				CreatedAt:   formatTime(sess.CreatedAt),
+			})
+		}
+
+		c.JSON(http.StatusOK, SessionListResponse{Sessions: resp})
+		return
+	}
+
+	// 无 project_id 参数时列出活跃 session
+	sessions, err := h.svc.ListActiveSessions(c.Request.Context())
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	var resp []SessionResponse
+	for _, sess := range sessions {
+		resp = append(resp, SessionResponse{
+			ID:          sess.ID,
+			ProjectID:   sess.ProjectID,
+			UserID:      sess.UserID,
+			ContainerID: sess.ContainerID,
+			NodeIP:      sess.NodeIP,
+			Status:      string(sess.Status),
+			Strategy:    string(sess.Strategy),
+			CreatedAt:   formatTime(sess.CreatedAt),
+		})
+	}
+
+	c.JSON(http.StatusOK, SessionListResponse{Sessions: resp})
+}
+
 func (h *SessionHandler) CreateSession(c *gin.Context) {
 	var req CreateSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -55,7 +108,6 @@ func (h *SessionHandler) CreateSession(c *gin.Context) {
 	})
 }
 
-// GetSession GET /api/v1/sessions/:id
 func (h *SessionHandler) GetSession(c *gin.Context) {
 	id := c.Param("id")
 
@@ -78,24 +130,31 @@ func (h *SessionHandler) GetSession(c *gin.Context) {
 	})
 }
 
-// TerminateSession DELETE /api/v1/sessions/:id
+// 立即返回响应，在后台 goroutine 中执行容器清理，避免 CLI 退出延迟。
 func (h *SessionHandler) TerminateSession(c *gin.Context) {
 	id := c.Param("id")
 
-	if err := h.svc.TerminateSession(c.Request.Context(), id); err != nil {
+	if _, err := h.svc.GetSession(c.Request.Context(), id); err != nil {
 		status := mapServiceError(err)
 		respondError(c, status, err)
 		return
 	}
 
+	// 立即返回
 	c.JSON(http.StatusOK, gin.H{
-		"status":     "terminated",
+		"status":     "terminating",
 		"session_id": id,
 	})
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := h.svc.TerminateSession(ctx, id); err != nil {
+			slog.Error("Background terminate failed", "session_id", id, "error", err)
+		}
+	}()
 }
 
-// ConfigureAgent POST /api/v1/sessions/:id/configure
-// 给 Session 的 Agent 发送配置请求
 func (h *SessionHandler) ConfigureAgent(c *gin.Context) {
 	id := c.Param("id")
 
@@ -105,7 +164,6 @@ func (h *SessionHandler) ConfigureAgent(c *gin.Context) {
 		return
 	}
 
-	// Convert request to proto
 	protoReq := &agentproto.ConfigureRequest{
 		SessionId:    id,
 		SystemPrompt: req.SystemPrompt,
@@ -135,27 +193,48 @@ func (h *SessionHandler) ConfigureAgent(c *gin.Context) {
 	})
 }
 
-// StopAgent POST /api/v1/sessions/:id/stop
-// 给 Session 的 Agent 发送停止请求
+// 立即返回响应，在后台 goroutine 中执行 gRPC Stop
 func (h *SessionHandler) StopAgent(c *gin.Context) {
 	id := c.Param("id")
 
-	resp, err := h.svc.StopAgent(c.Request.Context(), id)
-	if err != nil {
+	if _, err := h.svc.GetSession(c.Request.Context(), id); err != nil {
+		status := mapServiceError(err)
+		respondError(c, status, err)
+		return
+	}
+
+	// 立即返回
+	c.JSON(http.StatusOK, gin.H{
+		"success":    true,
+		"message":    "Stop signal sent",
+		"session_id": id,
+	})
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		if _, err := h.svc.StopAgent(ctx, id); err != nil {
+			slog.Error("Background stop agent failed", "session_id", id, "error", err)
+		}
+	}()
+}
+
+func (h *SessionHandler) RestartSession(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := h.svc.RestartSession(c.Request.Context(), id); err != nil {
 		status := mapServiceError(err)
 		respondError(c, status, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":    resp.Success,
-		"message":    resp.Message,
+		"status":     "restarted",
 		"session_id": id,
+		"message":    "Container restarted successfully",
 	})
 }
 
-// SyncFiles POST /api/v1/sessions/:id/sync
-// 将文件从容器工作目录复制到主机项目目录。
 func (h *SessionHandler) SyncFiles(c *gin.Context) {
 	id := c.Param("id")
 
@@ -176,8 +255,6 @@ func (h *SessionHandler) SyncFiles(c *gin.Context) {
 	})
 }
 
-// ListFiles GET /api/v1/sessions/:id/files
-// 列出容器工作目录中的文件。
 func (h *SessionHandler) ListFiles(c *gin.Context) {
 	id := c.Param("id")
 	path := c.DefaultQuery("path", "")
@@ -195,8 +272,6 @@ func (h *SessionHandler) ListFiles(c *gin.Context) {
 	})
 }
 
-// ReadFile GET /api/v1/sessions/:id/files/read
-// 读取容器工作目录中的单个文件。
 func (h *SessionHandler) ReadFile(c *gin.Context) {
 	id := c.Param("id")
 	path := c.Query("path")
@@ -220,7 +295,6 @@ func (h *SessionHandler) ReadFile(c *gin.Context) {
 	})
 }
 
-// HealthCheckSession GET /api/v1/sessions/:id/health
 func (h *SessionHandler) HealthCheckSession(c *gin.Context) {
 	id := c.Param("id")
 
@@ -236,13 +310,15 @@ func (h *SessionHandler) HealthCheckSession(c *gin.Context) {
 		healthStatus = "healthy"
 	}
 
+	containerState, _ := h.svc.GetContainerState(c.Request.Context(), id)
+
 	c.JSON(http.StatusOK, HealthResponse{
-		Status:    healthStatus,
-		Timestamp: formatTime(time.Now()),
+		Status:         healthStatus,
+		ContainerState: containerState,
+		Timestamp:      formatTime(time.Now()),
 	})
 }
 
-// WaitReady GET /api/v1/sessions/:id/wait
 func (h *SessionHandler) WaitReady(c *gin.Context) {
 	id := c.Param("id")
 
@@ -265,9 +341,8 @@ func (h *SessionHandler) WaitReady(c *gin.Context) {
 	})
 }
 
-// CreateService POST /api/v1/sessions/:id/services
 // 为 Agent 创建一个伴随的 Docker 容器
-// TODO：这部分的逻辑可以优化一下，当前的 Docker 管理有些混乱
+// TODO：现在使用 docker-compose.yml 管理外部依赖，这个之后可以删除
 func (h *SessionHandler) CreateService(c *gin.Context) {
 	id := c.Param("id")
 
@@ -299,7 +374,6 @@ func (h *SessionHandler) CreateService(c *gin.Context) {
 	})
 }
 
-// RemoveService DELETE /api/v1/sessions/:id/services/:service_id
 func (h *SessionHandler) RemoveService(c *gin.Context) {
 	id := c.Param("id")
 	serviceID := c.Param("service_id")
@@ -317,7 +391,6 @@ func (h *SessionHandler) RemoveService(c *gin.Context) {
 	})
 }
 
-// ListServices GET /api/v1/sessions/:id/services
 func (h *SessionHandler) ListServices(c *gin.Context) {
 	id := c.Param("id")
 
@@ -341,7 +414,6 @@ func (h *SessionHandler) ListServices(c *gin.Context) {
 	})
 }
 
-// CreateComposeStack POST /api/v1/sessions/:id/compose
 // Agent 通过 compose 文件创建一组基础设施服务（DooD 方式）
 func (h *SessionHandler) CreateComposeStack(c *gin.Context) {
 	id := c.Param("id")
@@ -380,7 +452,6 @@ func (h *SessionHandler) CreateComposeStack(c *gin.Context) {
 	})
 }
 
-// GetComposeStack GET /api/v1/sessions/:id/compose
 func (h *SessionHandler) GetComposeStack(c *gin.Context) {
 	id := c.Param("id")
 
@@ -409,7 +480,6 @@ func (h *SessionHandler) GetComposeStack(c *gin.Context) {
 	})
 }
 
-// TeardownComposeStack DELETE /api/v1/sessions/:id/compose
 func (h *SessionHandler) TeardownComposeStack(c *gin.Context) {
 	id := c.Param("id")
 

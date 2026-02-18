@@ -29,6 +29,7 @@ func (r *Repository) Create(ctx context.Context, session *session.Session) error
 		ProjectID:     session.ProjectID,
 		UserID:        session.UserID,
 		SessionStatus: session.Status,
+		Strategy:      session.Strategy,
 		CreatedAt:     session.CreatedAt,
 	}
 
@@ -54,6 +55,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*session.Session, 
 					ContainerID: cachedSession.ContainerID,
 					NodeIP:      cachedSession.NodeIP,
 					Status:      cachedSession.Status,
+					Strategy:    cachedSession.Strategy,
 					CreatedAt:   cachedSession.CreatedAt,
 				}
 
@@ -75,6 +77,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*session.Session, 
 		ContainerID: sessionModel.ContainerID,
 		NodeIP:      sessionModel.NodeIP,
 		Status:      sessionModel.SessionStatus,
+		Strategy:    sessionModel.Strategy,
 		CreatedAt:   sessionModel.CreatedAt,
 	}
 
@@ -87,6 +90,7 @@ func (r *Repository) GetByID(ctx context.Context, id string) (*session.Session, 
 			ContainerID: sessionModel.ContainerID,
 			NodeIP:      sessionModel.NodeIP,
 			Status:      sessionModel.SessionStatus,
+			Strategy:    sessionModel.Strategy,
 			CreatedAt:   sessionModel.CreatedAt,
 		}
 
@@ -130,4 +134,57 @@ func (r *Repository) UpdateSessionContainerInfo(ctx context.Context, id string, 
 	}
 
 	return nil
+}
+
+func (r *Repository) ListByStatus(ctx context.Context, statuses []session.SessionStatus) ([]*session.Session, error) {
+	var models []SessionModel
+	err := r.db.Model(&models).
+		Where("session_status IN (?)", pg.In(statuses)).
+		Order("created_at DESC").
+		Select()
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]*session.Session, 0, len(models))
+	for _, m := range models {
+		sessions = append(sessions, &session.Session{
+			ID:          m.ID,
+			ProjectID:   m.ProjectID,
+			UserID:      m.UserID,
+			ContainerID: m.ContainerID,
+			NodeIP:      m.NodeIP,
+			Status:      m.SessionStatus,
+			Strategy:    m.Strategy,
+			CreatedAt:   m.CreatedAt,
+		})
+	}
+	return sessions, nil
+}
+
+func (r *Repository) ListByProject(ctx context.Context, projectID string) ([]*session.Session, error) {
+	var models []SessionModel
+	err := r.db.Model(&models).
+		Where("project_id = ?", projectID).
+		Order("created_at DESC").
+		Limit(50).
+		Select()
+	if err != nil {
+		return nil, err
+	}
+
+	sessions := make([]*session.Session, 0, len(models))
+	for _, m := range models {
+		sessions = append(sessions, &session.Session{
+			ID:          m.ID,
+			ProjectID:   m.ProjectID,
+			UserID:      m.UserID,
+			ContainerID: m.ContainerID,
+			NodeIP:      m.NodeIP,
+			Status:      m.SessionStatus,
+			Strategy:    m.Strategy,
+			CreatedAt:   m.CreatedAt,
+		})
+	}
+	return sessions, nil
 }

@@ -11,30 +11,30 @@ type CreateSessionRequest struct {
 	Strategy  string   `json:"strategy" binding:"required,oneof=Warm-Strategy Cold-Strategy"`
 	Image     string   `json:"image"`
 	EnvVars   []string `json:"env_vars"`
+	AgentType string   `json:"agent_type"`
 }
 
 type ChatRequest struct {
 	Message string `json:"message" binding:"required"`
 }
 
-// ConfigureAgentRequest configures the agent inside a session's container.
+// Agent 配置请求体
 type ConfigureAgentRequest struct {
 	SystemPrompt string            `json:"system_prompt"`
 	BuiltinTools []string          `json:"builtin_tools"` // e.g. ["bash","file_read","file_write","list_files"]
-	Tools        []ToolDefRequest  `json:"tools"`         // extra user-defined tools
-	AgentConfig  map[string]string `json:"agent_config"`  // e.g. {"max_loops":"10"}
+	Tools        []ToolDefRequest  `json:"tools"`
+	AgentConfig  map[string]string `json:"agent_config"` // e.g. {"max_loops":"10"}
 }
 
 type ToolDefRequest struct {
 	Name           string `json:"name" binding:"required"`
 	Description    string `json:"description"`
-	ParametersJSON string `json:"parameters_json"` // JSON Schema string
+	ParametersJSON string `json:"parameters_json"`
 }
 
-// SyncFilesRequest triggers copying files from container to host.
 type SyncFilesRequest struct {
-	SrcPath  string `json:"src_path"`  // path inside container (default: /app/workspace/)
-	DestPath string `json:"dest_path"` // relative to project dir on host (default: root)
+	SrcPath  string `json:"src_path"`
+	DestPath string `json:"dest_path"`
 }
 
 type SessionResponse struct {
@@ -51,6 +51,10 @@ type SessionResponse struct {
 type ChatResponse struct {
 	Status    string `json:"status"`
 	SessionID string `json:"session_id"`
+}
+
+type SessionListResponse struct {
+	Sessions []SessionResponse `json:"sessions"`
 }
 
 type ConfigureAgentResponse struct {
@@ -77,8 +81,9 @@ type FileContentResponse struct {
 }
 
 type HealthResponse struct {
-	Status    string `json:"status"`
-	Timestamp string `json:"timestamp"`
+	Status         string `json:"status"`
+	ContainerState string `json:"container_state,omitempty"`
+	Timestamp      string `json:"timestamp"`
 }
 
 type ErrorResponse struct {
@@ -107,8 +112,6 @@ type ServiceListResponse struct {
 	SessionID string            `json:"session_id"`
 	Services  []ServiceResponse `json:"services"`
 }
-
-// ── Compose Stack types ──
 
 type CreateComposeAPIRequest struct {
 	ComposeContent string `json:"compose_content"` // docker-compose.yml 文件内容

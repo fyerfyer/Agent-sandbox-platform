@@ -18,8 +18,9 @@ import (
 var _ SessionWorker = (*SessionTaskWorker)(nil)
 
 type WorkerConfig struct {
-	ProjectDir     string // 项目存储根目录，如 "/.../agent-platform/projects"
-	PlatformAPIURL string // 容器内 Agent 回调 Platform 的地址
+	ProjectDir      string // 项目存储根目录，如 "/.../agent-platform/projects"
+	PlatformAPIURL  string // 容器内 Agent 回调 Platform 的地址
+	ContainerLogDir string // 容器日志存放目录
 }
 
 type SessionTaskWorker struct {
@@ -55,8 +56,9 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		"strategy", payload.Strategy,
 		"image", payload.Image)
 
-	// Auto-inject PLATFORM_API_URL so the Python agent can call back
-	// to the Go platform (e.g., create_service, export_files).
+	// 自动将 PLATFORM_API_URL 注入环境变量
+	// 方便容器内 Agent 回调 Platform API（如创建服务、文件同步等）。
+	// 如果用户已在 EnvVars 中设置，则不覆盖。
 	if w.config.PlatformAPIURL != "" {
 		hasURL := false
 		for _, v := range payload.EnvVars {
@@ -117,7 +119,7 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		return err
 	}
 
-	// ── 对于 Cold Strategy，等待容器内自启动的 gRPC 服务器就绪 ──
+	// 对于 Cold Strategy，等待容器内自启动的 gRPC 服务器就绪 
 	if _, ok := strategy.(*orchestrator.ColdStrategy); ok {
 		w.logger.Info("Waiting for cold container agent server to become ready",
 			"session_id", payload.SessionID, "container_id", container.ID)
@@ -134,12 +136,12 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		w.logger.Info("Cold container agent server is ready", "session_id", payload.SessionID)
 	}
 
-	// ── 对于 Warm Strategy，先同步文件、启动 Agent，再标记 Ready ──
+	// 对于 Warm Strategy，先同步文件、启动 Agent，再标记 Ready
 	if _, ok := strategy.(*orchestrator.WarmStrategy); ok {
 		projectRoot := filepath.Join(w.config.ProjectDir, payload.ProjectID)
 		w.logger.Info("Syncing project files", "project_root", projectRoot, "session_id", payload.SessionID)
 
-		// 项目目录可能尚不存在（首次使用），创建空目录以避免 TarContext 失败
+		// 项目目录可能尚不存在，创建空目录以避免 TarContext 失败
 		if err := ensureDir(projectRoot); err != nil {
 			w.logger.Warn("Failed to ensure project dir", "path", projectRoot, "error", err)
 		}
@@ -190,7 +192,7 @@ func (w *SessionTaskWorker) HandleSessionCreate(ctx context.Context, task *asynq
 		w.logger.Info("Agent server started successfully", "session_id", payload.SessionID)
 	}
 
-	// ── Agent gRPC 服务器已就绪，标记 Session 为 Ready ──
+	// Agent gRPC 服务器已就绪，标记 Session 为 Ready
 	if err := w.repo.UpdateSessionStatus(ctx, payload.SessionID, session.StatusReady); err != nil {
 		w.logger.Error("Failed to update session status to ready", "session_id", payload.SessionID, "error", err)
 		return err

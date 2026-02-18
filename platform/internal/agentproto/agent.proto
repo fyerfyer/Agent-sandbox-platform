@@ -17,8 +17,6 @@ service AgentService {
   rpc Health (Ping) returns (Pong);
 }
 
-// ─── Configure ───────────────────────────────────────────────
-
 message ConfigureRequest {
   string session_id = 1;
   string system_prompt = 2;
@@ -39,15 +37,11 @@ message ToolDef {
   string parameters_json = 3; // JSON Schema describing the tool parameters
 }
 
-// ─── RunStep ─────────────────────────────────────────────────
-
 message RunRequest {
   string session_id = 1;
   string input_text = 2;
   map<string, string> env_vars = 3;
 }
-
-// ─── Stop ────────────────────────────────────────────────────
 
 message StopRequest {
   string session_id = 1;
@@ -57,8 +51,6 @@ message StopResponse {
   bool success = 1;
   string message = 2;
 }
-
-// ─── Events ──────────────────────────────────────────────────
 
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;

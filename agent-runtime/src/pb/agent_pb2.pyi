@@ -107,6 +107,32 @@ class StopResponse(_message.Message):
     message: str
     def __init__(self, success: bool = ..., message: _Optional[str] = ...) -> None: ...
 
+class GetHistoryRequest(_message.Message):
+    __slots__ = ("session_id",)
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    session_id: str
+    def __init__(self, session_id: _Optional[str] = ...) -> None: ...
+
+class ChatMessage(_message.Message):
+    __slots__ = ("role", "content", "tool_call_id", "tool_calls_json")
+    ROLE_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    TOOL_CALLS_JSON_FIELD_NUMBER: _ClassVar[int]
+    role: str
+    content: str
+    tool_call_id: str
+    tool_calls_json: str
+    def __init__(self, role: _Optional[str] = ..., content: _Optional[str] = ..., tool_call_id: _Optional[str] = ..., tool_calls_json: _Optional[str] = ...) -> None: ...
+
+class GetHistoryResponse(_message.Message):
+    __slots__ = ("success", "messages")
+    SUCCESS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGES_FIELD_NUMBER: _ClassVar[int]
+    success: bool
+    messages: _containers.RepeatedCompositeFieldContainer[ChatMessage]
+    def __init__(self, success: bool = ..., messages: _Optional[_Iterable[_Union[ChatMessage, _Mapping]]] = ...) -> None: ...
+
 class AgentEvent(_message.Message):
     __slots__ = ("type", "content", "source", "timestamp", "metadata_json")
     TYPE_FIELD_NUMBER: _ClassVar[int]

@@ -4,7 +4,7 @@ import logging
 import os
 from typing import AsyncGenerator, Any, Dict, List, Optional
 
-from src.core.base import BaseAgent
+from src.core.base import BaseAgent, AgentMetadata, AgentCapability
 from src.core.llm import LLMClient
 from src.core.memory import Memory
 from src.config import settings
@@ -127,6 +127,25 @@ DEFAULT_TASK_PROMPT = (
 
 # 默认简单 ReAct Agent 实现
 class DefaultAgent(BaseAgent):
+
+  @classmethod
+  def metadata(cls) -> AgentMetadata:
+    return AgentMetadata(
+      name="DefaultAgent",
+      version="1.0.0",
+      description="Built-in ReAct agent with streaming and tool calling",
+      capabilities=[
+        AgentCapability.STREAMING,
+        AgentCapability.TOOL_CALLING,
+        AgentCapability.MULTI_TURN,
+        AgentCapability.CODE_EXECUTION,
+        AgentCapability.FILE_IO,
+        AgentCapability.COMPOSE_STACK,
+        AgentCapability.CUSTOM_TOOLS,
+      ],
+      supported_config_keys=["max_loops"],
+    )
+
   def __init__(self):
     self.llm = LLMClient()
     self.memory = Memory()

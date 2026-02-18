@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Iterator
+from typing import Any, Iterator, List
 
 import httpx
 
@@ -11,7 +11,11 @@ import httpx
 class SessionHandle:
   id: str
   status: str
-
+  project_id: str = ""
+  user_id: str = ""
+  container_id: str = ""
+  strategy: str = ""
+  created_at: str = ""
 
 class PlatformApiClient:
   def __init__(self, base_url: str):
@@ -24,6 +28,7 @@ class PlatformApiClient:
   def health(self) -> dict[str, Any]:
     return self._client.get(f"{self.base_url}/health").json()
 
+  # Session CRUD 操作
   def create_session(
     self,
     project_id: str,
@@ -44,7 +49,15 @@ class PlatformApiClient:
     )
     resp.raise_for_status()
     data = resp.json()
-    return SessionHandle(id=data["id"], status=data.get("status", "unknown"))
+    return SessionHandle(
+      id=data["id"],
+      status=data.get("status", "unknown"),
+      project_id=data.get("project_id", project_id),
+      user_id=data.get("user_id", user_id),
+      container_id=data.get("container_id", ""),
+      strategy=data.get("strategy", strategy),
+      created_at=data.get("created_at", ""),
+    )
 
   def wait_ready(self, session_id: str) -> dict[str, Any]:
     resp = self._client.get(f"{self.base_url}/api/v1/sessions/{session_id}/wait")
@@ -76,6 +89,57 @@ class PlatformApiClient:
     )
     resp.raise_for_status()
 
+
+  def list_sessions(self, project_id: str = "") -> List[SessionHandle]:
+    params = {}
+    if project_id:
+      params["project_id"] = project_id
+    resp = self._client.get(f"{self.base_url}/api/v1/sessions", params=params)
+    resp.raise_for_status()
+    data = resp.json()
+    sessions = data.get("sessions") or []
+    return [
+      SessionHandle(
+        id=s["id"],
+        status=s.get("status", "unknown"),
+        project_id=s.get("project_id", ""),
+        user_id=s.get("user_id", ""),
+        container_id=s.get("container_id", ""),
+        strategy=s.get("strategy", ""),
+        created_at=s.get("created_at", ""),
+      )
+      for s in sessions
+    ]
+
+  def session_status(self, session_id: str) -> dict[str, Any]:
+    resp = self._client.get(f"{self.base_url}/api/v1/sessions/{session_id}")
+    resp.raise_for_status()
+    return resp.json()
+
+  def session_health(self, session_id: str) -> dict[str, Any]:
+    try:
+      resp = self._client.get(f"{self.base_url}/api/v1/sessions/{session_id}/health")
+      resp.raise_for_status()
+      return resp.json()
+    except Exception:
+      return {"status": "unreachable"}
+
+  def stop_agent(self, session_id: str) -> dict[str, Any]:
+    """停止 Agent 但不销毁容器。用于 /stop 命令。"""
+    resp = self._client.post(f"{self.base_url}/api/v1/sessions/{session_id}/stop")
+    resp.raise_for_status()
+    return resp.json()
+
+  def restart_session(self, session_id: str) -> dict[str, Any]:
+    resp = self._client.post(f"{self.base_url}/api/v1/sessions/{session_id}/restart")
+    resp.raise_for_status()
+    return resp.json()
+
+  def terminate_session(self, session_id: str) -> None:
+    """终止 session 并销毁容器。用于 /quit 命令。"""
+    resp = self._client.delete(f"{self.base_url}/api/v1/sessions/{session_id}")
+    resp.raise_for_status()
+
   def list_files(self, session_id: str) -> dict[str, Any]:
     resp = self._client.get(f"{self.base_url}/api/v1/sessions/{session_id}/files")
     resp.raise_for_status()
@@ -94,15 +158,7 @@ class PlatformApiClient:
     resp.raise_for_status()
     return resp.json()
 
-  def session_status(self, session_id: str) -> dict[str, Any]:
-    resp = self._client.get(f"{self.base_url}/api/v1/sessions/{session_id}")
-    resp.raise_for_status()
-    return resp.json()
-
-  def terminate_session(self, session_id: str) -> None:
-    resp = self._client.delete(f"{self.base_url}/api/v1/sessions/{session_id}")
-    resp.raise_for_status()
-
+  # SSE 流处理
   def stream_events(self, session_id: str) -> Iterator[dict[str, Any]]:
     with self._client.stream(
       "GET",

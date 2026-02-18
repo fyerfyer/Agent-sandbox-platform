@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v4.25.3
-// source: internal/agentproto/agent.proto
+// source: agent.proto
 
 package agentproto
 
@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AgentService_Configure_FullMethodName = "/agent.AgentService/Configure"
-	AgentService_RunStep_FullMethodName   = "/agent.AgentService/RunStep"
-	AgentService_Stop_FullMethodName      = "/agent.AgentService/Stop"
-	AgentService_Health_FullMethodName    = "/agent.AgentService/Health"
+	AgentService_Configure_FullMethodName  = "/agent.AgentService/Configure"
+	AgentService_RunStep_FullMethodName    = "/agent.AgentService/RunStep"
+	AgentService_Stop_FullMethodName       = "/agent.AgentService/Stop"
+	AgentService_GetHistory_FullMethodName = "/agent.AgentService/GetHistory"
+	AgentService_Health_FullMethodName     = "/agent.AgentService/Health"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -36,6 +37,8 @@ type AgentServiceClient interface {
 	RunStep(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AgentEvent], error)
 	// Stop/interrupt a running agent step.
 	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StopResponse, error)
+	// Get conversation history for a session.
+	GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error)
 	// Health check.
 	Health(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error)
 }
@@ -87,6 +90,16 @@ func (c *agentServiceClient) Stop(ctx context.Context, in *StopRequest, opts ...
 	return out, nil
 }
 
+func (c *agentServiceClient) GetHistory(ctx context.Context, in *GetHistoryRequest, opts ...grpc.CallOption) (*GetHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetHistoryResponse)
+	err := c.cc.Invoke(ctx, AgentService_GetHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentServiceClient) Health(ctx context.Context, in *Ping, opts ...grpc.CallOption) (*Pong, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Pong)
@@ -108,6 +121,8 @@ type AgentServiceServer interface {
 	RunStep(*RunRequest, grpc.ServerStreamingServer[AgentEvent]) error
 	// Stop/interrupt a running agent step.
 	Stop(context.Context, *StopRequest) (*StopResponse, error)
+	// Get conversation history for a session.
+	GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error)
 	// Health check.
 	Health(context.Context, *Ping) (*Pong, error)
 	mustEmbedUnimplementedAgentServiceServer()
@@ -128,6 +143,9 @@ func (UnimplementedAgentServiceServer) RunStep(*RunRequest, grpc.ServerStreaming
 }
 func (UnimplementedAgentServiceServer) Stop(context.Context, *StopRequest) (*StopResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Stop not implemented")
+}
+func (UnimplementedAgentServiceServer) GetHistory(context.Context, *GetHistoryRequest) (*GetHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetHistory not implemented")
 }
 func (UnimplementedAgentServiceServer) Health(context.Context, *Ping) (*Pong, error) {
 	return nil, status.Error(codes.Unimplemented, "method Health not implemented")
@@ -200,6 +218,24 @@ func _AgentService_Stop_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_GetHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).GetHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_GetHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).GetHistory(ctx, req.(*GetHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentService_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Ping)
 	if err := dec(in); err != nil {
@@ -234,6 +270,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentService_Stop_Handler,
 		},
 		{
+			MethodName: "GetHistory",
+			Handler:    _AgentService_GetHistory_Handler,
+		},
+		{
 			MethodName: "Health",
 			Handler:    _AgentService_Health_Handler,
 		},
@@ -245,5 +285,5 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "internal/agentproto/agent.proto",
+	Metadata: "agent.proto",
 }

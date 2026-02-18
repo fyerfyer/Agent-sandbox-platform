@@ -25,17 +25,19 @@ platform:
   api_base: http://localhost:8080
   auto_start: true
   startup_timeout_seconds: 45
-  root_dir: /absolute/path/to/agent-platform/platform
+  root_dir: ../../platform
+  # log_dir: ./logs  # 可选：日志输出到项目目录下
 
 runtime:
   image: agent-runtime:latest
   auto_build_image: true
-  root_dir: /absolute/path/to/agent-platform/agent-runtime
+  root_dir: ../../agent-runtime
 
 session:
-  project_id: my-agent-project
-  user_id: my-user
+  project_id: demo-project
+  user_id: demo-user
   strategy: Cold-Strategy
+  agent_type: langchain # default | simple | langchain | openai-agents
   env_vars:
     DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
     DEEPSEEK_BASE_URL: https://api.deepseek.com
@@ -43,10 +45,23 @@ session:
     MAX_LOOPS: "20"
 
 agent:
-  system_prompt: "You are a practical coding assistant."
-  builtin_tools: [bash, file_read, file_write, list_files, export_files]
+  system_prompt: |
+    You are a practical coding assistant.
+  builtin_tools:
+    - bash
+    - file_read
+    - file_write
+    - list_files
+    - export_files
   agent_config:
     max_loops: "20"
+
+cli:
+  default_exit: "stop"
+  history_max_records: 100
+  auto_resume_last: true
+  prompt_prefix: "User"
+  stream_timeout: 1000
 ```
 
 创建 `.env`：

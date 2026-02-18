@@ -83,6 +83,12 @@ def _platform_env(config: ClientConfig) -> dict[str, str]:
   env.setdefault("POOL_HOST_ROOT", host_root)
   env.setdefault("WORKER_PROJECT_DIR", host_root)
   Path(host_root).mkdir(parents=True, exist_ok=True)
+
+  # 日志目录配置
+  if config.platform.log_dir:
+    env["LOG_DIR"] = config.platform.log_dir
+    Path(config.platform.log_dir).mkdir(parents=True, exist_ok=True)
+
   return env
 
 
@@ -131,7 +137,8 @@ def bootstrap_platform(config: ClientConfig) -> PlatformProcess:
   _run(["docker", "compose", "up", "-d"], cwd=platform_root)
   _run(["go", "build", "-o", "bin/platform-server", "./cmd/server"], cwd=platform_root, env=env)
 
-  log_file = platform_root / "platform.log"
+  log_dir = Path(config.platform.log_dir) if config.platform.log_dir else platform_root
+  log_file = log_dir / "platform.log"
   log_file.parent.mkdir(parents=True, exist_ok=True)
   log_fp = open(log_file, "w", encoding="utf-8")
   process = subprocess.Popen(

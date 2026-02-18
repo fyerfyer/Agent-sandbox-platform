@@ -350,6 +350,85 @@ func (s *Service) HealthCheck(ctx context.Context, sessionID string) (bool, erro
 	return inspect.State.Running, nil
 }
 
+func (s *Service) GetContainerState(ctx context.Context, sessionID string) (string, error) {
+	sess, err := s.SessionMgr.GetSession(ctx, sessionID)
+	if err != nil {
+		return "", err
+	}
+
+	if sess.ContainerID == "" {
+		return "no_container", nil
+	}
+
+	inspect, inspectErr := s.Docker.ContainerInspect(ctx, sess.ContainerID)
+	if inspectErr != nil {
+		return "unreachable", nil
+	}
+
+	return string(inspect.State.Status), nil
+}
+
+func (s *Service) RestartSession(ctx context.Context, sessionID string) error {
+	sess, err := s.SessionMgr.GetSession(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("session not found: %w", err)
+	}
+
+	if sess.ContainerID == "" {
+		return fmt.Errorf("session has no container")
+	}
+
+	inspect, err := s.Docker.ContainerInspect(ctx, sess.ContainerID)
+	if err != nil {
+		return fmt.Errorf("failed to inspect container: %w", err)
+	}
+
+	// 只重启未运行的容器，避免中途重启导致状态不一致
+	if inspect.State.Running {
+		s.Logger.Info("Container already running", "session_id", sessionID, "container_id", sess.ContainerID)
+		return nil
+	}
+
+	// 清理 Dispatcher 中的旧状态
+	s.Dispatcher.CleanUp(sessionID)
+
+	if err := s.Docker.ContainerStart(ctx, sess.ContainerID, container.StartOptions{}); err != nil {
+		return fmt.Errorf("failed to restart container: %w", err)
+	}
+
+	s.Logger.Info("Container restarted", "session_id", sessionID, "container_id", sess.ContainerID)
+
+	// 重新获取新的容器 IP
+	newInspect, err := s.Docker.ContainerInspect(ctx, sess.ContainerID)
+	if err != nil {
+		s.Logger.Warn("Failed to inspect container after restart", "error", err)
+	} else {
+		newIP := ""
+		for _, net := range newInspect.NetworkSettings.Networks {
+			if net.IPAddress != "" {
+				newIP = net.IPAddress
+				break
+			}
+		}
+		if newIP != "" && newIP != sess.NodeIP {
+			s.Logger.Info("Container IP changed after restart",
+				"session_id", sessionID,
+				"old_ip", sess.NodeIP,
+				"new_ip", newIP,
+			)
+			if err := s.SessionRepo.UpdateSessionContainerInfo(ctx, sessionID, sess.ContainerID, newIP); err != nil {
+				s.Logger.Warn("Failed to update container IP after restart", "error", err)
+			}
+		}
+	}
+
+	if err := s.SessionRepo.UpdateSessionStatus(ctx, sessionID, session.StatusReady); err != nil {
+		s.Logger.Warn("Failed to update session status after restart", "error", err)
+	}
+
+	return nil
+}
+
 func (s *Service) WaitForReady(ctx context.Context, sessionID string, pollInterval time.Duration) (*session.Session, error) {
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
@@ -372,8 +451,6 @@ func (s *Service) WaitForReady(ctx context.Context, sessionID string, pollInterv
 		}
 	}
 }
-
-// ── Compose Stack 管理 ──
 
 func (s *Service) CreateComposeStack(ctx context.Context, sessionID string, req CreateComposeRequest) (*ComposeStack, error) {
 	sess, err := s.SessionMgr.GetSession(ctx, sessionID)
@@ -411,4 +488,16 @@ func (s *Service) RefreshComposeStack(ctx context.Context, sessionID string) (*C
 		return nil, fmt.Errorf("compose manager not initialized")
 	}
 	return s.Compose.RefreshServices(ctx, sessionID)
+}
+
+func (s *Service) ListSessionsByProject(ctx context.Context, projectID string) ([]*session.Session, error) {
+	return s.SessionRepo.ListByProject(ctx, projectID)
+}
+
+func (s *Service) ListActiveSessions(ctx context.Context) ([]*session.Session, error) {
+	return s.SessionRepo.ListByStatus(ctx, []session.SessionStatus{
+		session.StatusInitializing,
+		session.StatusReady,
+		session.StatusRunning,
+	})
 }

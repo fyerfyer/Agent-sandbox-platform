@@ -14,6 +14,8 @@ type Config struct {
 	Pool     PoolConfig
 	Worker   WorkerConfig
 	Metrics  MetricsConfig
+	Log      LogConfig
+	Session  SessionCleanupConfig
 }
 
 type ServerConfig struct {
@@ -55,8 +57,31 @@ type MetricsConfig struct {
 	Addr string
 }
 
+type LogConfig struct {
+	// Dir 日志文件存储目录。
+	// 默认为 ~/.agent-platform/logs
+	// 可设置为 "." 使日志生成在当前工作目录下。
+	Dir string
+
+	// ContainerLogDir 容器执行日志（.dockerlogs）的目录。
+	// 默认使用 LogConfig.Dir。
+	ContainerLogDir string
+
+	// Level 日志级别：debug, info, warn, error
+	Level string
+}
+
+type SessionCleanupConfig struct {
+	Interval time.Duration
+	// 超过此时间的 Initializing/Running 会话被视为过期，自动清理
+	MaxAge time.Duration
+	// 是否启用自动清理
+	Enabled bool
+}
+
 // Load 加载配置
 func Load() *Config {
+	logDir := getEnv("LOG_DIR", defaultLogDir())
 	return &Config{
 		Server: ServerConfig{
 			Addr:         getEnv("SERVER_ADDR", ":8080"),
@@ -90,6 +115,16 @@ func Load() *Config {
 		},
 		Metrics: MetricsConfig{
 			Addr: getEnv("METRICS_ADDR", ":9090"),
+		},
+		Log: LogConfig{
+			Dir:             logDir,
+			ContainerLogDir: getEnv("CONTAINER_LOG_DIR", filepath.Join(logDir, "containers")),
+			Level:           getEnv("LOG_LEVEL", "info"),
+		},
+		Session: SessionCleanupConfig{
+			Interval: getDurationEnv("SESSION_CLEANUP_INTERVAL", 2*time.Minute),
+			MaxAge:   getDurationEnv("SESSION_MAX_AGE", 30*time.Minute),
+			Enabled:  getBoolEnv("SESSION_CLEANUP_ENABLED", true),
 		},
 	}
 }
@@ -128,6 +163,18 @@ func getDurationEnv(key string, defaultVal time.Duration) time.Duration {
 	return defaultVal
 }
 
+func getBoolEnv(key string, defaultVal bool) bool {
+	if val := os.Getenv(key); val != "" {
+		switch val {
+		case "true", "1", "yes":
+			return true
+		case "false", "0", "no":
+			return false
+		}
+	}
+	return defaultVal
+}
+
 // defaultHostRoot 返回一个用户可写的默认路径，用于冷容器的绑定挂载。
 func defaultHostRoot() string {
 	home, err := os.UserHomeDir()
@@ -144,4 +191,22 @@ func defaultProjectDir() string {
 		return "/tmp/agent-platform/projects"
 	}
 	return filepath.Join(home, ".agent-platform", "projects")
+}
+
+// defaultLogDir 返回默认的日志目录。
+func defaultLogDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/agent-platform/logs"
+	}
+	return filepath.Join(home, ".agent-platform", "logs")
+}
+
+// defaultDataDir 返回默认的数据目录（session 历史等）。
+func defaultDataDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "/tmp/agent-platform/data"
+	}
+	return filepath.Join(home, ".agent-platform", "data")
 }

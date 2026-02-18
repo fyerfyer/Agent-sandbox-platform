@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v4.25.3
-// source: internal/agentproto/agent.proto
+// source: agent.proto
 
 package agentproto
 
@@ -69,11 +69,11 @@ func (x EventType) String() string {
 }
 
 func (EventType) Descriptor() protoreflect.EnumDescriptor {
-	return file_internal_agentproto_agent_proto_enumTypes[0].Descriptor()
+	return file_agent_proto_enumTypes[0].Descriptor()
 }
 
 func (EventType) Type() protoreflect.EnumType {
-	return &file_internal_agentproto_agent_proto_enumTypes[0]
+	return &file_agent_proto_enumTypes[0]
 }
 
 func (x EventType) Number() protoreflect.EnumNumber {
@@ -82,7 +82,7 @@ func (x EventType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EventType.Descriptor instead.
 func (EventType) EnumDescriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{0}
+	return file_agent_proto_rawDescGZIP(), []int{0}
 }
 
 type ServiceStatus int32
@@ -118,11 +118,11 @@ func (x ServiceStatus) String() string {
 }
 
 func (ServiceStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_internal_agentproto_agent_proto_enumTypes[1].Descriptor()
+	return file_agent_proto_enumTypes[1].Descriptor()
 }
 
 func (ServiceStatus) Type() protoreflect.EnumType {
-	return &file_internal_agentproto_agent_proto_enumTypes[1]
+	return &file_agent_proto_enumTypes[1]
 }
 
 func (x ServiceStatus) Number() protoreflect.EnumNumber {
@@ -131,7 +131,7 @@ func (x ServiceStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ServiceStatus.Descriptor instead.
 func (ServiceStatus) EnumDescriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{1}
+	return file_agent_proto_rawDescGZIP(), []int{1}
 }
 
 type ConfigureRequest struct {
@@ -147,7 +147,7 @@ type ConfigureRequest struct {
 
 func (x *ConfigureRequest) Reset() {
 	*x = ConfigureRequest{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[0]
+	mi := &file_agent_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -159,7 +159,7 @@ func (x *ConfigureRequest) String() string {
 func (*ConfigureRequest) ProtoMessage() {}
 
 func (x *ConfigureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[0]
+	mi := &file_agent_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +172,7 @@ func (x *ConfigureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigureRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureRequest) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{0}
+	return file_agent_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ConfigureRequest) GetSessionId() string {
@@ -221,7 +221,7 @@ type ConfigureResponse struct {
 
 func (x *ConfigureResponse) Reset() {
 	*x = ConfigureResponse{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[1]
+	mi := &file_agent_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -233,7 +233,7 @@ func (x *ConfigureResponse) String() string {
 func (*ConfigureResponse) ProtoMessage() {}
 
 func (x *ConfigureResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[1]
+	mi := &file_agent_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -246,7 +246,7 @@ func (x *ConfigureResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigureResponse.ProtoReflect.Descriptor instead.
 func (*ConfigureResponse) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{1}
+	return file_agent_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ConfigureResponse) GetSuccess() bool {
@@ -281,7 +281,7 @@ type ToolDef struct {
 
 func (x *ToolDef) Reset() {
 	*x = ToolDef{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[2]
+	mi := &file_agent_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -293,7 +293,7 @@ func (x *ToolDef) String() string {
 func (*ToolDef) ProtoMessage() {}
 
 func (x *ToolDef) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[2]
+	mi := &file_agent_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -306,7 +306,7 @@ func (x *ToolDef) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToolDef.ProtoReflect.Descriptor instead.
 func (*ToolDef) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{2}
+	return file_agent_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ToolDef) GetName() string {
@@ -341,7 +341,7 @@ type RunRequest struct {
 
 func (x *RunRequest) Reset() {
 	*x = RunRequest{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[3]
+	mi := &file_agent_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -353,7 +353,7 @@ func (x *RunRequest) String() string {
 func (*RunRequest) ProtoMessage() {}
 
 func (x *RunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[3]
+	mi := &file_agent_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -366,7 +366,7 @@ func (x *RunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunRequest.ProtoReflect.Descriptor instead.
 func (*RunRequest) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{3}
+	return file_agent_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RunRequest) GetSessionId() string {
@@ -399,7 +399,7 @@ type StopRequest struct {
 
 func (x *StopRequest) Reset() {
 	*x = StopRequest{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[4]
+	mi := &file_agent_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -411,7 +411,7 @@ func (x *StopRequest) String() string {
 func (*StopRequest) ProtoMessage() {}
 
 func (x *StopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[4]
+	mi := &file_agent_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -424,7 +424,7 @@ func (x *StopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
 func (*StopRequest) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{4}
+	return file_agent_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *StopRequest) GetSessionId() string {
@@ -444,7 +444,7 @@ type StopResponse struct {
 
 func (x *StopResponse) Reset() {
 	*x = StopResponse{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[5]
+	mi := &file_agent_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -456,7 +456,7 @@ func (x *StopResponse) String() string {
 func (*StopResponse) ProtoMessage() {}
 
 func (x *StopResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[5]
+	mi := &file_agent_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -469,7 +469,7 @@ func (x *StopResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopResponse.ProtoReflect.Descriptor instead.
 func (*StopResponse) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{5}
+	return file_agent_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *StopResponse) GetSuccess() bool {
@@ -486,6 +486,170 @@ func (x *StopResponse) GetMessage() string {
 	return ""
 }
 
+type GetHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SessionId     string                 `protobuf:"bytes,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHistoryRequest) Reset() {
+	*x = GetHistoryRequest{}
+	mi := &file_agent_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHistoryRequest) ProtoMessage() {}
+
+func (x *GetHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHistoryRequest.ProtoReflect.Descriptor instead.
+func (*GetHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetHistoryRequest) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type ChatMessage struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"` // "user", "assistant", "tool", "system"
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	ToolCallId    string                 `protobuf:"bytes,3,opt,name=tool_call_id,json=toolCallId,proto3" json:"tool_call_id,omitempty"`          // for tool messages
+	ToolCallsJson string                 `protobuf:"bytes,4,opt,name=tool_calls_json,json=toolCallsJson,proto3" json:"tool_calls_json,omitempty"` // serialized tool_calls for assistant messages
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChatMessage) Reset() {
+	*x = ChatMessage{}
+	mi := &file_agent_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChatMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChatMessage) ProtoMessage() {}
+
+func (x *ChatMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChatMessage.ProtoReflect.Descriptor instead.
+func (*ChatMessage) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ChatMessage) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *ChatMessage) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *ChatMessage) GetToolCallId() string {
+	if x != nil {
+		return x.ToolCallId
+	}
+	return ""
+}
+
+func (x *ChatMessage) GetToolCallsJson() string {
+	if x != nil {
+		return x.ToolCallsJson
+	}
+	return ""
+}
+
+type GetHistoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Messages      []*ChatMessage         `protobuf:"bytes,2,rep,name=messages,proto3" json:"messages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHistoryResponse) Reset() {
+	*x = GetHistoryResponse{}
+	mi := &file_agent_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHistoryResponse) ProtoMessage() {}
+
+func (x *GetHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHistoryResponse.ProtoReflect.Descriptor instead.
+func (*GetHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetHistoryResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *GetHistoryResponse) GetMessages() []*ChatMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
 type AgentEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          EventType              `protobuf:"varint,1,opt,name=type,proto3,enum=agent.EventType" json:"type,omitempty"`
@@ -499,7 +663,7 @@ type AgentEvent struct {
 
 func (x *AgentEvent) Reset() {
 	*x = AgentEvent{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[6]
+	mi := &file_agent_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -511,7 +675,7 @@ func (x *AgentEvent) String() string {
 func (*AgentEvent) ProtoMessage() {}
 
 func (x *AgentEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[6]
+	mi := &file_agent_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -524,7 +688,7 @@ func (x *AgentEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentEvent.ProtoReflect.Descriptor instead.
 func (*AgentEvent) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{6}
+	return file_agent_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AgentEvent) GetType() EventType {
@@ -570,7 +734,7 @@ type Ping struct {
 
 func (x *Ping) Reset() {
 	*x = Ping{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[7]
+	mi := &file_agent_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -582,7 +746,7 @@ func (x *Ping) String() string {
 func (*Ping) ProtoMessage() {}
 
 func (x *Ping) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[7]
+	mi := &file_agent_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -595,7 +759,7 @@ func (x *Ping) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ping.ProtoReflect.Descriptor instead.
 func (*Ping) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{7}
+	return file_agent_proto_rawDescGZIP(), []int{10}
 }
 
 type Pong struct {
@@ -607,7 +771,7 @@ type Pong struct {
 
 func (x *Pong) Reset() {
 	*x = Pong{}
-	mi := &file_internal_agentproto_agent_proto_msgTypes[8]
+	mi := &file_agent_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +783,7 @@ func (x *Pong) String() string {
 func (*Pong) ProtoMessage() {}
 
 func (x *Pong) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_agentproto_agent_proto_msgTypes[8]
+	mi := &file_agent_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +796,7 @@ func (x *Pong) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Pong.ProtoReflect.Descriptor instead.
 func (*Pong) Descriptor() ([]byte, []int) {
-	return file_internal_agentproto_agent_proto_rawDescGZIP(), []int{8}
+	return file_agent_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Pong) GetStatus() ServiceStatus {
@@ -642,11 +806,11 @@ func (x *Pong) GetStatus() ServiceStatus {
 	return ServiceStatus_SERVICE_STATUS_UNSPECIFIED
 }
 
-var File_internal_agentproto_agent_proto protoreflect.FileDescriptor
+var File_agent_proto protoreflect.FileDescriptor
 
-const file_internal_agentproto_agent_proto_rawDesc = "" +
+const file_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x1finternal/agentproto/agent.proto\x12\x05agent\"\xae\x02\n" +
+	"\vagent.proto\x12\x05agent\"\xae\x02\n" +
 	"\x10ConfigureRequest\x12\x1d\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\x12#\n" +
@@ -680,7 +844,19 @@ const file_internal_agentproto_agent_proto_rawDesc = "" +
 	"session_id\x18\x01 \x01(\tR\tsessionId\"B\n" +
 	"\fStopResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xa7\x01\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"2\n" +
+	"\x11GetHistoryRequest\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\tR\tsessionId\"\x85\x01\n" +
+	"\vChatMessage\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12 \n" +
+	"\ftool_call_id\x18\x03 \x01(\tR\n" +
+	"toolCallId\x12&\n" +
+	"\x0ftool_calls_json\x18\x04 \x01(\tR\rtoolCallsJson\"^\n" +
+	"\x12GetHistoryResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12.\n" +
+	"\bmessages\x18\x02 \x03(\v2\x12.agent.ChatMessageR\bmessages\"\xa7\x01\n" +
 	"\n" +
 	"AgentEvent\x12$\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x10.agent.EventTypeR\x04type\x12\x18\n" +
@@ -703,84 +879,92 @@ const file_internal_agentproto_agent_proto_rawDesc = "" +
 	"\rServiceStatus\x12\x1e\n" +
 	"\x1aSERVICE_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SERVICE_STATUS_OK\x10\x01\x12\x17\n" +
-	"\x13SERVICE_STATUS_BUSY\x10\x022\xd6\x01\n" +
+	"\x13SERVICE_STATUS_BUSY\x10\x022\x99\x02\n" +
 	"\fAgentService\x12>\n" +
 	"\tConfigure\x12\x17.agent.ConfigureRequest\x1a\x18.agent.ConfigureResponse\x121\n" +
 	"\aRunStep\x12\x11.agent.RunRequest\x1a\x11.agent.AgentEvent0\x01\x12/\n" +
-	"\x04Stop\x12\x12.agent.StopRequest\x1a\x13.agent.StopResponse\x12\"\n" +
+	"\x04Stop\x12\x12.agent.StopRequest\x1a\x13.agent.StopResponse\x12A\n" +
+	"\n" +
+	"GetHistory\x12\x18.agent.GetHistoryRequest\x1a\x19.agent.GetHistoryResponse\x12\"\n" +
 	"\x06Health\x12\v.agent.Ping\x1a\v.agent.PongB\x1eZ\x1cplatform/internal/agentprotob\x06proto3"
 
 var (
-	file_internal_agentproto_agent_proto_rawDescOnce sync.Once
-	file_internal_agentproto_agent_proto_rawDescData []byte
+	file_agent_proto_rawDescOnce sync.Once
+	file_agent_proto_rawDescData []byte
 )
 
-func file_internal_agentproto_agent_proto_rawDescGZIP() []byte {
-	file_internal_agentproto_agent_proto_rawDescOnce.Do(func() {
-		file_internal_agentproto_agent_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_internal_agentproto_agent_proto_rawDesc), len(file_internal_agentproto_agent_proto_rawDesc)))
+func file_agent_proto_rawDescGZIP() []byte {
+	file_agent_proto_rawDescOnce.Do(func() {
+		file_agent_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)))
 	})
-	return file_internal_agentproto_agent_proto_rawDescData
+	return file_agent_proto_rawDescData
 }
 
-var file_internal_agentproto_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_internal_agentproto_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
-var file_internal_agentproto_agent_proto_goTypes = []any{
-	(EventType)(0),            // 0: agent.EventType
-	(ServiceStatus)(0),        // 1: agent.ServiceStatus
-	(*ConfigureRequest)(nil),  // 2: agent.ConfigureRequest
-	(*ConfigureResponse)(nil), // 3: agent.ConfigureResponse
-	(*ToolDef)(nil),           // 4: agent.ToolDef
-	(*RunRequest)(nil),        // 5: agent.RunRequest
-	(*StopRequest)(nil),       // 6: agent.StopRequest
-	(*StopResponse)(nil),      // 7: agent.StopResponse
-	(*AgentEvent)(nil),        // 8: agent.AgentEvent
-	(*Ping)(nil),              // 9: agent.Ping
-	(*Pong)(nil),              // 10: agent.Pong
-	nil,                       // 11: agent.ConfigureRequest.AgentConfigEntry
-	nil,                       // 12: agent.RunRequest.EnvVarsEntry
+var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agent_proto_goTypes = []any{
+	(EventType)(0),             // 0: agent.EventType
+	(ServiceStatus)(0),         // 1: agent.ServiceStatus
+	(*ConfigureRequest)(nil),   // 2: agent.ConfigureRequest
+	(*ConfigureResponse)(nil),  // 3: agent.ConfigureResponse
+	(*ToolDef)(nil),            // 4: agent.ToolDef
+	(*RunRequest)(nil),         // 5: agent.RunRequest
+	(*StopRequest)(nil),        // 6: agent.StopRequest
+	(*StopResponse)(nil),       // 7: agent.StopResponse
+	(*GetHistoryRequest)(nil),  // 8: agent.GetHistoryRequest
+	(*ChatMessage)(nil),        // 9: agent.ChatMessage
+	(*GetHistoryResponse)(nil), // 10: agent.GetHistoryResponse
+	(*AgentEvent)(nil),         // 11: agent.AgentEvent
+	(*Ping)(nil),               // 12: agent.Ping
+	(*Pong)(nil),               // 13: agent.Pong
+	nil,                        // 14: agent.ConfigureRequest.AgentConfigEntry
+	nil,                        // 15: agent.RunRequest.EnvVarsEntry
 }
-var file_internal_agentproto_agent_proto_depIdxs = []int32{
+var file_agent_proto_depIdxs = []int32{
 	4,  // 0: agent.ConfigureRequest.tools:type_name -> agent.ToolDef
-	11, // 1: agent.ConfigureRequest.agent_config:type_name -> agent.ConfigureRequest.AgentConfigEntry
-	12, // 2: agent.RunRequest.env_vars:type_name -> agent.RunRequest.EnvVarsEntry
-	0,  // 3: agent.AgentEvent.type:type_name -> agent.EventType
-	1,  // 4: agent.Pong.status:type_name -> agent.ServiceStatus
-	2,  // 5: agent.AgentService.Configure:input_type -> agent.ConfigureRequest
-	5,  // 6: agent.AgentService.RunStep:input_type -> agent.RunRequest
-	6,  // 7: agent.AgentService.Stop:input_type -> agent.StopRequest
-	9,  // 8: agent.AgentService.Health:input_type -> agent.Ping
-	3,  // 9: agent.AgentService.Configure:output_type -> agent.ConfigureResponse
-	8,  // 10: agent.AgentService.RunStep:output_type -> agent.AgentEvent
-	7,  // 11: agent.AgentService.Stop:output_type -> agent.StopResponse
-	10, // 12: agent.AgentService.Health:output_type -> agent.Pong
-	9,  // [9:13] is the sub-list for method output_type
-	5,  // [5:9] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	14, // 1: agent.ConfigureRequest.agent_config:type_name -> agent.ConfigureRequest.AgentConfigEntry
+	15, // 2: agent.RunRequest.env_vars:type_name -> agent.RunRequest.EnvVarsEntry
+	9,  // 3: agent.GetHistoryResponse.messages:type_name -> agent.ChatMessage
+	0,  // 4: agent.AgentEvent.type:type_name -> agent.EventType
+	1,  // 5: agent.Pong.status:type_name -> agent.ServiceStatus
+	2,  // 6: agent.AgentService.Configure:input_type -> agent.ConfigureRequest
+	5,  // 7: agent.AgentService.RunStep:input_type -> agent.RunRequest
+	6,  // 8: agent.AgentService.Stop:input_type -> agent.StopRequest
+	8,  // 9: agent.AgentService.GetHistory:input_type -> agent.GetHistoryRequest
+	12, // 10: agent.AgentService.Health:input_type -> agent.Ping
+	3,  // 11: agent.AgentService.Configure:output_type -> agent.ConfigureResponse
+	11, // 12: agent.AgentService.RunStep:output_type -> agent.AgentEvent
+	7,  // 13: agent.AgentService.Stop:output_type -> agent.StopResponse
+	10, // 14: agent.AgentService.GetHistory:output_type -> agent.GetHistoryResponse
+	13, // 15: agent.AgentService.Health:output_type -> agent.Pong
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
-func init() { file_internal_agentproto_agent_proto_init() }
-func file_internal_agentproto_agent_proto_init() {
-	if File_internal_agentproto_agent_proto != nil {
+func init() { file_agent_proto_init() }
+func file_agent_proto_init() {
+	if File_agent_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_agentproto_agent_proto_rawDesc), len(file_internal_agentproto_agent_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_internal_agentproto_agent_proto_goTypes,
-		DependencyIndexes: file_internal_agentproto_agent_proto_depIdxs,
-		EnumInfos:         file_internal_agentproto_agent_proto_enumTypes,
-		MessageInfos:      file_internal_agentproto_agent_proto_msgTypes,
+		GoTypes:           file_agent_proto_goTypes,
+		DependencyIndexes: file_agent_proto_depIdxs,
+		EnumInfos:         file_agent_proto_enumTypes,
+		MessageInfos:      file_agent_proto_msgTypes,
 	}.Build()
-	File_internal_agentproto_agent_proto = out.File
-	file_internal_agentproto_agent_proto_goTypes = nil
-	file_internal_agentproto_agent_proto_depIdxs = nil
+	File_agent_proto = out.File
+	file_agent_proto_goTypes = nil
+	file_agent_proto_depIdxs = nil
 }

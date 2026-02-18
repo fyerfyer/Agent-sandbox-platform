@@ -28,6 +28,8 @@ type Server struct {
 	asynqServer *asynq.Server
 	asynqMux    *asynq.ServeMux
 	pool        *orchestrator.Pool
+	svc         *service.Service
+	cleaner     *session.SessionCleaner
 	logger      *slog.Logger
 }
 
@@ -51,12 +53,27 @@ func NewServer(cfg *config.Config, deps *Dependency) *Server {
 	sessionMgr := session.NewSessionManager(pool, sessionRepo, deps.Redis, deps.AsynqClient, logger)
 	disp := dispatcher.NewDispatcher(bus, logger)
 	companions := service.NewCompanionManager(deps.Docker, cfg.Pool.NetworkName, logger)
-	compose := service.NewComposeManager(deps.Docker, cfg.Pool.NetworkName, "", logger)
+	compose := service.NewComposeManager(deps.Docker, cfg.Pool.NetworkName, cfg.Log.ContainerLogDir, logger)
 	svc := service.NewService(sessionMgr, sessionRepo, disp, bus, deps.Docker, logger, cfg.Pool.HostRoot, companions, compose)
 
+	// 会话清理器
+	var cleaner *session.SessionCleaner
+	if cfg.Session.Enabled {
+		cleaner = session.NewSessionCleaner(
+			sessionRepo,
+			svc.TerminateSession,
+			session.CleanupConfig{
+				Interval: cfg.Session.Interval,
+				MaxAge:   cfg.Session.MaxAge,
+			},
+			logger,
+		)
+	}
+
 	sessionWorker := worker.NewSessionTaskWorker(pool, sessionRepo, bus, worker.WorkerConfig{
-		ProjectDir:     cfg.Worker.ProjectDir,
-		PlatformAPIURL: "http://host.docker.internal" + cfg.Server.Addr,
+		ProjectDir:      cfg.Worker.ProjectDir,
+		PlatformAPIURL:  "http://host.docker.internal" + cfg.Server.Addr,
+		ContainerLogDir: cfg.Log.ContainerLogDir,
 	}, logger)
 
 	asynqServer := asynq.NewServer(deps.AsynqRedis, asynq.Config{
@@ -82,6 +99,8 @@ func NewServer(cfg *config.Config, deps *Dependency) *Server {
 		asynqServer: asynqServer,
 		asynqMux:    mux,
 		pool:        pool,
+		svc:         svc,
+		cleaner:     cleaner,
 		logger:      logger,
 	}
 
@@ -89,6 +108,11 @@ func NewServer(cfg *config.Config, deps *Dependency) *Server {
 }
 
 func (s *Server) Start(ctx context.Context) error {
+	// 启动会话清理器
+	if s.cleaner != nil {
+		go s.cleaner.Start()
+	}
+
 	go func() {
 		s.logger.Info("Starting Asynq worker", "concurrency", s.cfg.Worker.Concurrency)
 		if err := s.asynqServer.Start(s.asynqMux); err != nil {
@@ -124,11 +148,19 @@ func (s *Server) Shutdown() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	// 停止清理器
+	if s.cleaner != nil {
+		s.cleaner.Stop()
+	}
+
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 		s.logger.Error("HTTP server shutdown error", "error", err)
 	}
 
 	s.asynqServer.Shutdown()
+
+	// 清理所有活跃 session 的容器和资源
+	session.CleanupAllActive(shutdownCtx, s.svc.SessionRepo, s.svc.TerminateSession, s.logger)
 
 	s.pool.Shutdown(shutdownCtx, nil)
 

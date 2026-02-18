@@ -29,6 +29,7 @@ class PlatformConfig(BaseModel):
   auto_start: bool = True
   startup_timeout_seconds: int = 45
   root_dir: str | None = None
+  log_dir: str | None = None  # 日志输出目录，None 则使用平台默认值
   pool: PoolConfig = Field(default_factory=PoolConfig)
 
 
@@ -42,6 +43,7 @@ class SessionConfig(BaseModel):
   project_id: str = "interactive"
   user_id: str = "interactive-user"
   strategy: Literal["Cold-Strategy", "Warm-Strategy"] = "Cold-Strategy"
+  agent_type: str = "default"  # agent 类型：default, langchain, openai-agents, simple, 或自定义
   env_vars: dict[str, str] = Field(default_factory=dict)
 
 
@@ -54,11 +56,20 @@ class AgentConfig(BaseModel):
   agent_config: dict[str, str] = Field(default_factory=lambda: {"max_loops": "20"})
 
 
+class CLIConfig(BaseModel):
+  """CLI 行为配置。"""
+  history_max_records: int = 100  # 本地 session 历史最大保留条数
+  auto_resume_last: bool = False  # run 时自动恢复上一个 stopped session
+  prompt_prefix: str = "You"  # 输入提示符前缀
+  stream_timeout: int = 300  # SSE 流最长等待时间（秒）
+
+
 class ClientConfig(BaseModel):
   platform: PlatformConfig = Field(default_factory=PlatformConfig)
   runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
   session: SessionConfig = Field(default_factory=SessionConfig)
   agent: AgentConfig = Field(default_factory=AgentConfig)
+  cli: CLIConfig = Field(default_factory=CLIConfig)
 
 
 def _resolve_env(value: Any) -> Any:

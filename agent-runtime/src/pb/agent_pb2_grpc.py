@@ -49,6 +49,11 @@ class AgentServiceStub(object):
                 request_serializer=agent__pb2.StopRequest.SerializeToString,
                 response_deserializer=agent__pb2.StopResponse.FromString,
                 _registered_method=True)
+        self.GetHistory = channel.unary_unary(
+                '/agent.AgentService/GetHistory',
+                request_serializer=agent__pb2.GetHistoryRequest.SerializeToString,
+                response_deserializer=agent__pb2.GetHistoryResponse.FromString,
+                _registered_method=True)
         self.Health = channel.unary_unary(
                 '/agent.AgentService/Health',
                 request_serializer=agent__pb2.Ping.SerializeToString,
@@ -81,6 +86,13 @@ class AgentServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetHistory(self, request, context):
+        """Get conversation history for a session.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Health(self, request, context):
         """Health check.
         """
@@ -105,6 +117,11 @@ def add_AgentServiceServicer_to_server(servicer, server):
                     servicer.Stop,
                     request_deserializer=agent__pb2.StopRequest.FromString,
                     response_serializer=agent__pb2.StopResponse.SerializeToString,
+            ),
+            'GetHistory': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetHistory,
+                    request_deserializer=agent__pb2.GetHistoryRequest.FromString,
+                    response_serializer=agent__pb2.GetHistoryResponse.SerializeToString,
             ),
             'Health': grpc.unary_unary_rpc_method_handler(
                     servicer.Health,
@@ -193,6 +210,33 @@ class AgentService(object):
             '/agent.AgentService/Stop',
             agent__pb2.StopRequest.SerializeToString,
             agent__pb2.StopResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetHistory(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent.AgentService/GetHistory',
+            agent__pb2.GetHistoryRequest.SerializeToString,
+            agent__pb2.GetHistoryResponse.FromString,
             options,
             channel_credentials,
             insecure,
