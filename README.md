@@ -1,5 +1,13 @@
 # Agent Platform
 
+![Maintenance](https://img.shields.io/badge/maintenance-archived-red.svg)
+
+> ⚠️ **Project Status: Archived / No Longer Maintained**
+>
+> This project is no longer actively maintained.
+> It remains available for reference and experimentation.
+> Issues and pull requests may not be reviewed.
+
 > 目前已经跑通了基本的 Agent 调用、docker-compose 依赖创建、宿主机——沙箱内容同步。
 
 当前项目包含
